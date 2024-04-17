@@ -88,3 +88,6 @@ This project is maintained by the NSS Team at Xidian University.
 ## License
 
 NssMPClib is based on the MIT license, as described in LICENSE.
+
+## Connect us
+xidiannss@gmail.com
