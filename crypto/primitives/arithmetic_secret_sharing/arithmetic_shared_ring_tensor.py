@@ -233,11 +233,9 @@ class ArithmeticSharedRingTensor(RingTensor):
                 inputs = ArithmeticSharedRingTensor.cat([inputs, inputs_], 0)
             inputs_0 = inputs[0::2]
             inputs_1 = inputs[1::2]
-
             ge = inputs_0 >= inputs_1
-            le = -(ge - 1)
 
-            return ge * inputs_0 + le * inputs_1
+            return ge * (inputs_0 - inputs_1) + inputs_1
 
         if dim is None:
             x = x.flatten()

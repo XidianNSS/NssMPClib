@@ -76,6 +76,9 @@ def share_model(model, num_of_party=2):
      Args:
          model: the class of plaintext model
          num_of_party: the number of parties
+
+    Returns:
+        list: the shared parameters
      """
 
     def modify_bn_layers(module):
@@ -108,13 +111,15 @@ def share_data(*inputs, num_of_party=2):
     """
     For the data holder.
     share the input data into n shares.
+
     Args:
         inputs: the input data
         num_of_party: the number of parties
+
+    Returns:
+        list: the shared data
     """
-    input_shares = []
-    for i in range(num_of_party):
-        input_shares.append([])
+    input_shares = [[] for _ in range(num_of_party)]
     for input_info in inputs:
         if isinstance(input_info, str):
             # read data from file
@@ -158,6 +163,9 @@ def gen_mat_beaver(dummy_input, model, num_of_triples, num_of_party=2):
         model: the class of plaintext model
         num_of_triples
         num_of_party
+
+    Returns:
+        list: the list of matrix beaver triples
     """
     mat_beaver_lists = [[] for _ in range(num_of_party)]
 

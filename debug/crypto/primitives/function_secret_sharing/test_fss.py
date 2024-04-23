@@ -1,5 +1,5 @@
 """
-function_secret_sharing 测试
+function_secret_sharing test
 """
 from common.tensor.ring_tensor import RingTensor
 from crypto.primitives.function_secret_sharing import *

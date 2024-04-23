@@ -25,8 +25,13 @@ class AES:
     def bit_random(self, bits):
         """
         Each seed generates 'bits' bits of pseudo-random numbers, carried in int64, independent of BIT_LEN
-        :param bits: 需要随机数的位宽
-        :return: tensor，第一个维度是并行化的数量（种子个数），第二个维度是承载bits位随机数所需要的int64们
+
+        Args:
+            bits: the bit width of the random numbers
+
+        Returns:
+            tensor: The first dimension is the number of parallels (seeds)
+                    and the second dimension is the number of int64 required to represent the random number.
         """
         random_out = self._random_repeat(bits)
         return random_out
