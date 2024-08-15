@@ -81,6 +81,9 @@ inference in this library.
 - [tutorials](https://github.com/XidianNSS/NssMPClib/tree/main/tutorials)  
   The tutorials package contains the usage tutorials of NssMPClib.
 
+## Notice
+This branch only supports secure two-party computation and privacy-preserving convolutional neural network inference. Secure three-party computation, privacy-preserving large language model inference, and other features are available in the **[beta](https://github.com/XidianNSS/NssMPClib/tree/beta)** branch.
+
 ## Maintainers
 
 This project is maintained by the NSS Team at Xidian University.
@@ -89,5 +92,5 @@ This project is maintained by the NSS Team at Xidian University.
 
 NssMPClib is based on the MIT license, as described in LICENSE.
 
-## Connect us
+## Contact us
 xidiannss@gmail.com
