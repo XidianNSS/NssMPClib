@@ -1,10 +1,12 @@
+import unittest
+
 import torch
 
-from config.base_configs import BIT_LEN, DEVICE
-from common.tensor.ring_tensor import RingTensor
+from NssMPC.config.configs import BIT_LEN, DEVICE
+from NssMPC.common.ring.ring_tensor import RingTensor
 
 
-class TestRingTensor:
+class TestRingTensor(unittest.TestCase):
     a = torch.tensor([[1, 2, 3], [4, 5, 6]], device=DEVICE)
     x = RingTensor([[1, 2, 3], [4, 5, 6]], device=DEVICE)
     y = RingTensor([[1, 2, 3], [4, 5, 6]], device=DEVICE)

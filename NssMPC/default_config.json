@@ -1,0 +1,75 @@
+{
+  "BIT_LEN": 64,
+  "LAMBDA": 128,
+  "GE_TYPE": "SIGMA",
+  "PRG_TYPE": "AES",
+  "DEVICE": "cuda",
+  "DEBUG_LEVEL": 2,
+  "DTYPE": "float",
+  "SCALE_BIT": 16,
+  "EXP_ITER": 8,
+  "GELU_TABLE_BIT": 6,
+  "TANH_TABLE_BIT": 7,
+  "VCMP_SPLIT_LEN": 8,
+  "SOCKET_MAX_SIZE": 32768,
+  "SOCKET_NUM": 4,
+  "SOCKET_TYPE": 0,
+  "SOCKET_3PC": {
+    "S0_ADDR": "127.0.0.1",
+    "S0_PORT": 9000,
+    "C0_S1_PORT": 8000,
+    "C0_S2_PORT": 8001,
+    "S1_ADDR": "127.0.0.1",
+    "S1_PORT": 9001,
+    "C1_S0_PORT": 8002,
+    "C1_S2_PORT": 8003,
+    "S2_ADDR": "127.0.0.1",
+    "S2_PORT": 9002,
+    "C2_S0_PORT": 8004,
+    "C2_S1_PORT": 8005
+  },
+  "SOCKET_2PC": {
+    "SERVER_IP": "127.0.0.1",
+    "CLIENT_IP": "127.0.0.1",
+    "SERVER_SERVER_PORT": 20000,
+    "SERVER_CLIENT_PORT": 20001,
+    "CLIENT_SERVER_PORT": 30000,
+    "CLIENT_CLIENT_PORT": 30001
+  },
+  "SOCKET_P0": {
+    "ADDRESS": "127.0.0.1",
+    "PORT": 9000,
+    "TO_NEXT": {
+      "ADDRESS": "127.0.0.1",
+      "PORT": 9100
+    },
+    "TO_PREVIOUS": {
+      "ADDRESS": "127.0.0.1",
+      "PORT": 9200
+    }
+  },
+  "SOCKET_P1": {
+    "ADDRESS": "127.0.0.1",
+    "PORT": 8000,
+    "TO_NEXT": {
+      "ADDRESS": "127.0.0.1",
+      "PORT": 8100
+    },
+    "TO_PREVIOUS": {
+      "ADDRESS": "127.0.0.1",
+      "PORT": 8200
+    }
+  },
+  "SOCKET_P2": {
+    "ADDRESS": "127.0.0.1",
+    "PORT": 7000,
+    "TO_NEXT": {
+      "ADDRESS": "127.0.0.1",
+      "PORT": 7100
+    },
+    "TO_PREVIOUS": {
+      "ADDRESS": "127.0.0.1",
+      "PORT": 7200
+    }
+  }
+}

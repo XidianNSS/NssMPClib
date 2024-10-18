@@ -1,33 +1,32 @@
-from application.neural_network.model.model_converter import share_model, load_secure_model
-from application.neural_network.party.neural_network_party import NeuralNetworkCS
-from config.base_configs import *
-from config.network_configs import *
-from data.neural_network.AlexNet.Alexnet import AlexNet
+import torch
+
+import NssMPC.application.neural_network as nn
+from data.AlexNet.Alexnet import AlexNet
+from NssMPC.config import NN_path
 
 # set server and client address
-server_server_address = (SERVER_IP, SERVER_SERVER_PORT)
-server_client_address = (SERVER_IP, SERVER_CLIENT_PORT)
-
-client_server_address = (CLIENT_IP, CLIENT_SERVER_PORT)
-client_client_address = (CLIENT_IP, CLIENT_CLIENT_PORT)
 
 if __name__ == '__main__':
-    server = NeuralNetworkCS(type='server')
-    server.connect(server_server_address, server_client_address, client_server_address, client_client_address)
-
+    server = nn.party.NeuralNetworkCS(type='server')
+    server.online()
     net = AlexNet()
-
-    net.load_state_dict(torch.load("data/neural_network/AlexNet/MNIST_bak.pkl"))
-
-    shared_param, shared_param_for_other = share_model(net)
+    net.load_state_dict(torch.load(NN_path + 'AlexNet_MNIST.pkl'))
+    shared_param, shared_param_for_other = nn.utils.share_model(net)
     server.send(shared_param_for_other)
 
     num = server.dummy_model(net)
 
-    net = load_secure_model(net, shared_param)
-
+    net = nn.utils.load_model(net, shared_param)
+    # with torch.profiler.profile(
+    #         schedule=torch.profiler.schedule(wait=0, warmup=1, active=2),
+    #         on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/test'),
+    #         record_shapes=False,
+    #         profile_memory=False,
+    #         with_stack=True
+    # ) as prof:
     while num:
         shared_data = server.receive()
         server.inference(net, shared_data)
         num -= 1
-    server.close()
+        # prof.step()
+    # server.close()
