@@ -7,7 +7,7 @@ from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.vsigma_key import 
 from NssMPC.crypto.aux_parameter.select_keys.vos_key import VOSKey
 # from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functionality import RssTruncAuxParams
 from NssMPC.crypto.aux_parameter.truncation_keys.rss_trunc_aux_param import RssTruncAuxParams
-from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.compare import MaliciousCMPKey, MACKey
+from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.compare import MACKey
 from NssMPC.secure_model.mpc_party.party import Party3PC
 from NssMPC.secure_model.utils.param_provider.matrix_beaver_provider import RssMatrixBeaverProvider
 from NssMPC.secure_model.utils.param_provider.os_provider import OSProvider
@@ -65,8 +65,8 @@ class HonestMajorityParty(Party3PC):
         participant and their preceding and following participants.
         """
         self.append_provider(ParamProvider(MACKey))
-        self.virtual_party_with_previous.append_provider(ParamProvider(MaliciousCMPKey))
-        self.virtual_party_with_next.append_provider(ParamProvider(MaliciousCMPKey))
+        self.virtual_party_with_previous.append_provider(ParamProvider(VSigmaKey))
+        self.virtual_party_with_next.append_provider(ParamProvider(VSigmaKey))
 
     def set_oblivious_selection_provider(self):
         """

@@ -6,8 +6,6 @@ from NssMPC import RingTensor
 from NssMPC.config.runtime import MAC_BUFFER
 from NssMPC.crypto.aux_parameter import Parameter
 from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional import coin, check_zero, open
-from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.msb_with_os import \
-    msb_with_os_without_mac_check
 from NssMPC.crypto.protocols.replicated_secret_sharing.semi_honest_functional import rand_like, mul_with_out_trunc
 
 
@@ -23,7 +21,8 @@ def secure_ge(x, y):  # TODO support float
     x.dtype = y.dtype = 'int'
 
     shape = z.shape
-
+    from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.msb_with_os import \
+        msb_with_os_without_mac_check
     res, mac_v, mac_key = msb_with_os_without_mac_check(z)
 
     MAC_BUFFER.add(res, mac_v, mac_key)

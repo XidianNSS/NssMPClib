@@ -14,7 +14,7 @@ from multiprocessing import Pipe, Lock
 from NssMPC.common.random.prg import MT19937_PRG
 from NssMPC.config import DEBUG_LEVEL, BIT_LEN, SOCKET_NUM, SOCKET_TYPE
 from NssMPC.crypto.aux_parameter import MatmulTriples, RssMatmulTriples
-from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional import MaliciousCMPKey
+from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.vsigma_key import VSigmaKey
 from NssMPC.secure_model.utils.buffer_thread.buffer_thread import BufferThread
 
 if SOCKET_TYPE == 0:
@@ -58,7 +58,7 @@ class Party(object):
         for name, provider in self.providers.items():
             if provider.param_type == MatmulTriples:
                 continue
-            if provider.param_type == MaliciousCMPKey:
+            if provider.param_type == VSigmaKey:
                 continue
             if provider.param_type == RssMatmulTriples:
                 continue

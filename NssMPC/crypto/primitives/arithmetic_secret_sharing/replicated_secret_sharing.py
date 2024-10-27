@@ -98,7 +98,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
     def __add__(self, other):
         # 此处介绍是否要涉及一些原理性的东西
         """
-        Adds a RSS object with a corresponding type.
+        Adds an RSS object with a corresponding type.
 
         :param other: The object to be added.
         :type other: ReplicatedSecretSharing or RingTensor or int
@@ -116,16 +116,16 @@ class ReplicatedSecretSharing(ArithmeticBase):
                 return self.__class__(RingPair(self.item[0] + zeros, self.item[1] + other), self.party)
             else:
                 return self.__class__(RingPair(self.item[0] + zeros, self.item[1] + zeros), self.party)
-        elif isinstance(other, int):
+        elif isinstance(other, (int, float)):
+            other = RingTensor.convert_to_ring(int(other * self.scale))
             if self.party.party_id == 0:
-                return self.__class__(RingPair(self.item[0] + other * self.scale, self.item[1]), self.party)
+                return self.__class__(RingPair(self.item[0] + other, self.item[1]), self.party)
             elif self.party.party_id == 2:
-                return self.__class__(RingPair(self.item[0], self.item[1] + other * self.scale), self.party)
+                return self.__class__(RingPair(self.item[0], self.item[1] + other), self.party)
             else:
                 return self.clone()
-
         else:
-            TypeError("unsupported operand type(s) for + 'ReplicatedSecretSharing' and ", type(other))
+            raise TypeError("unsupported operand type(s) for + 'ReplicatedSecretSharing' and ", type(other))
 
     def __sub__(self, other):
         """
@@ -148,14 +148,15 @@ class ReplicatedSecretSharing(ArithmeticBase):
             else:
                 return self.__class__(RingPair(self.item[0] - zeros, self.item[1] - zeros), self.party)
         elif isinstance(other, int):
+            other = RingTensor.convert_to_ring(int(other * self.scale))
             if self.party.party_id == 0:
-                return self.__class__(RingPair(self.item[0] - other * self.scale, self.item[1]), self.party)
+                return self.__class__(RingPair(self.item[0] - other), self.party)
             elif self.party.party_id == 2:
-                return self.__class__(RingPair(self.item[0], self.item[1] - other * self.scale), self.party)
+                return self.__class__(RingPair(self.item[0], self.item[1] - other), self.party)
             else:
                 return self.clone()
         else:
-            TypeError("unsupported operand type(s) for - 'ReplicatedSecretSharing' and ", type(other))
+            raise TypeError("unsupported operand type(s) for - 'ReplicatedSecretSharing' and ", type(other))
 
     def __mul__(self, other):
         # 这里分了party，如何理解，是否要解释
@@ -185,7 +186,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
             result = self.item * other
             return ReplicatedSecretSharing(result, self.party)
         else:
-            TypeError("unsupported operand type(s) for * 'ReplicatedSecretSharing' and ", type(other))
+            raise TypeError("unsupported operand type(s) for * 'ReplicatedSecretSharing' and ", type(other))
 
     def __matmul__(self, other):
         """
@@ -224,7 +225,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
             torch.cuda.empty_cache()
             return ReplicatedSecretSharing(RingPair(result0, result1), self.party)
         else:
-            TypeError("unsupported operand type(s) for @ 'ReplicatedSecretSharing' and ", type(other))
+            raise TypeError("unsupported operand type(s) for @ 'ReplicatedSecretSharing' and ", type(other))
 
     def __ge__(self, other):
         # 返回的是否是结果的分享值，以及关于party的判断

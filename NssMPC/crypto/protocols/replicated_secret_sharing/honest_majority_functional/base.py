@@ -113,8 +113,7 @@ def receive_share_from(input_id, party):
     if cmp != 0:
         raise ValueError("The two parties' calculations do not agree, and there may be a malicious party involved!")
     res = r + delta
-    # todo:不优雅的方式
-    res.dtype = DTYPE
+    res.dtype = delta.dtype
     return res
 
 

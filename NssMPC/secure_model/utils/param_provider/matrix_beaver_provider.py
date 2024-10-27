@@ -76,7 +76,13 @@ class MatrixBeaverProvider(FixedShapeProvider):
             if f"{list(x_shape)}_{list(y_shape)}" not in self.param.keys():
                 a = torch.ones(x_shape, dtype=data_type, device=DEVICE)
                 b = torch.ones(y_shape, dtype=data_type, device=DEVICE)
-
+                if len(x_shape) == 1 and len(y_shape) == 1:
+                    x_shape = (1, x_shape[0])
+                    y_shape = (y_shape[0], 1)
+                elif len(x_shape) == 1:
+                    x_shape = (1, x_shape[0])
+                elif len(y_shape) == 1:
+                    y_shape = (1, y_shape[0])
                 assert x_shape[-1] == y_shape[-2]
                 c_shape = torch.broadcast_shapes(x_shape[:-2], y_shape[:-2]) + (x_shape[-2], y_shape[-1])
                 c = torch.ones(c_shape, dtype=data_type, device=DEVICE) * x_shape[-1] * 2  # todo: c != a @ b也对?

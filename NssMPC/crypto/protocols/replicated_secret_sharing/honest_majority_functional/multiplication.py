@@ -3,10 +3,10 @@
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 from NssMPC.crypto.aux_parameter import RssMulTriples, RssMatmulTriples
-from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.base import check_zero, open
-from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.truncate import truncate
 from NssMPC.crypto.protocols.replicated_secret_sharing.semi_honest_functional import mul_with_out_trunc, \
     matmul_with_out_trunc
+from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.base import check_zero, open
+from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.truncate import truncate
 
 
 def v_mul(x, y):
@@ -33,8 +33,11 @@ def v_mul(x, y):
     a.dtype = b.dtype = c.dtype = x_hat.dtype = y_hat.dtype = 'int'
     e = x_hat + a
     f = y_hat + b
-    e = open(e)
-    f = open(f)
+    e_and_f = x.__class__.cat([e, f], dim=0)
+    common_e_f = open(e_and_f)
+    length = common_e_f.shape[0] // 2
+    e = common_e_f[:length]
+    f = common_e_f[length:]
 
     check = -c + b * e + a * f - e * f
 
@@ -72,15 +75,19 @@ def v_matmul(x, y):
     a.dtype = b.dtype = c.dtype = x_hat.dtype = y_hat.dtype = 'int'
     e = x_hat + a
     f = y_hat + b
-    e = open(e)
-    f = open(f)
+
+    e_and_f = x.__class__.cat([e.flatten(), f.flatten()], dim=0)
+    common_e_f = e_and_f.restore()
+    e = common_e_f[:x.numel()].reshape(x.shape)
+    f = common_e_f[x.numel():].reshape(y.shape)
+
     from NssMPC.crypto.primitives.arithmetic_secret_sharing import ReplicatedSecretSharing
     mat_1 = ReplicatedSecretSharing([e @ b.item[0], e @ b.item[1]], x.party)
     mat_2 = ReplicatedSecretSharing([a.item[0] @ f, a.item[1] @ f], x.party)
 
     check = -c + mat_1 + mat_2 - e @ f
     check_zero(res + check)
-    # print(ori_type)
+
     if ori_type == 'float':
         res = truncate(res)
     return res

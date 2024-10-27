@@ -966,7 +966,7 @@ class RingTensor(object):
         """
         return self.tensor.any()
 
-    def to(self, device):
+    def to(self, target):
         """
         Move the RingTensor to a specified device or convert the RingTensor to a specified type.
 
@@ -975,7 +975,14 @@ class RingTensor(object):
         :return: The RingTensor after the move or convert
         :rtype: RingTensor
         """
-        self.tensor = self.tensor.to(device)
+        if target == 'int' and self.dtype == 'float':
+            self.tensor = self.tensor // DTYPE_SCALE_MAPPING['float']
+            self.dtype = 'int'
+        elif target == 'float' and self.dtype == 'int':
+            self.tensor = self.tensor * DTYPE_SCALE_MAPPING['float']
+            self.dtype = 'float'
+        else:
+            self.tensor = self.tensor.to(target)
         return self
 
     def cpu(self):

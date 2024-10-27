@@ -109,7 +109,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
             if self.party.party_id == 0:  # 如果加的是RingTensor，代表其是没有经过share的，也就只有一方需要加上它。
                 new_tensor = self.item + other
             else:
-                new_tensor = self.item
+                new_tensor = self.item + RingTensor.zeros_like(other)
             return ArithmeticSecretSharing(new_tensor, self.party)
         elif isinstance(other, (int, float)):
             other = RingTensor.convert_to_ring(
@@ -154,7 +154,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
             if self.party.party_id == 0:
                 self.item += other
             else:
-                pass
+                self.item += RingTensor.zeros_like(other)
         elif isinstance(other, (int, float)):
             self += RingTensor.convert_to_ring(int(other * self.scale))
         else:
@@ -178,7 +178,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
             if self.party.party_id == 0:
                 new_tensor = self.item - other
             else:
-                new_tensor = self.item
+                new_tensor = self.item - RingTensor.zeros_like(other)
             return ArithmeticSecretSharing(new_tensor, self.party)
         elif isinstance(other, (int, float)):
             other = RingTensor.convert_to_ring(int(other * self.scale))
@@ -198,7 +198,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
             if self.party.party_id == 0:
                 self.item -= other
             else:
-                pass
+                self.item -= RingTensor.zeros_like(other)
         elif isinstance(other, (int, float)):
             self -= RingTensor.convert_to_ring(int(other * self.scale))
         else:
