@@ -112,7 +112,7 @@ class DCFKey(Parameter):
             v_cw = pow(-1, t_last_1) * (convert_tensor(v_lose_1) - convert_tensor(v_lose_0) - v_a)
 
             v_cw = torch.where(alpha.get_tensor_bit(alpha.bit_len - 1 - i) == 1, v_cw + pow(-1, t_last_1) * beta.tensor,
-                               v_cw)
+                               v_cw + torch.zeros_like(beta.tensor))
 
             v_a = (v_a
                    - convert_tensor(v_keep_1)
@@ -135,9 +135,6 @@ class DCFKey(Parameter):
             t_last_0 = t_keep_0 ^ (t_last_0 * t_keep_cw)
             t_last_1 = t_keep_1 ^ (t_last_1 * t_keep_cw)
 
-        k0.ex_cw_dcf = k1.ex_cw_dcf = pow(-1, t_last_1) * (
-                convert_tensor(s_last_1)
-                - convert_tensor(s_last_0)
-                - v_a[:, 0].view(-1, 1))
+        k0.ex_cw_dcf = k1.ex_cw_dcf = pow(-1, t_last_1) * (convert_tensor(s_last_1) - convert_tensor(s_last_0) - v_a)
 
         return k0, k1
