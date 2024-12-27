@@ -34,19 +34,22 @@ class RssTruncAuxParams(Parameter):
         return iter((self.r, self.r_hat))
 
     @staticmethod
-    def gen(num_of_params):
+    def gen(num_of_params, scale=SCALE):
         """
         Generates parameters for truncation operations of RSS.
 
         :param num_of_params: The number of params to generate.
         :type num_of_params: int
+        :param scale: The scale of the number to be truncated, defaults to SCALE.
+        :type scale: int
         :return: The generated parameters for three parties.
         :rtype: List[RssTruncAuxParams]
         """
         from NssMPC.crypto.primitives.arithmetic_secret_sharing import ReplicatedSecretSharing
         from NssMPC.config.configs import HALF_RING
-        r = RingTensor.random([num_of_params], down_bound=-HALF_RING // 3, upper_bound=HALF_RING // 3)
-        r_hat = r // SCALE
+        r_hat = RingTensor.random([num_of_params], down_bound=-HALF_RING // (2 * scale),
+                                  upper_bound=HALF_RING // (2 * scale))
+        r = r_hat * scale
         r_list = ReplicatedSecretSharing.share(r)
         r_hat_list = ReplicatedSecretSharing.share(r_hat)
         aux_params = []
@@ -59,12 +62,14 @@ class RssTruncAuxParams(Parameter):
         return aux_params
 
     @classmethod
-    def gen_and_save(cls, num):
+    def gen_and_save(cls, num, scale=SCALE):
         """
         Generates parameters for truncation operations of RSS and save them.
 
         :param num: The number of params to generate.
         :type num: int
+        :param scale: The scale of the number to be truncated, defaults to SCALE.
+        :type scale: int
         :return: The generated parameters for three parties.
         :rtype: List[RssTruncAuxParams]
         """
@@ -72,7 +77,8 @@ class RssTruncAuxParams(Parameter):
         file_path = f"{param_path}{cls.__name__}/"
         if not os.path.exists(file_path):
             os.makedirs(file_path)
+
+        file_name_base = f"RssTruncAuxParams_" if scale == SCALE else f"RssTruncAuxParams_{scale}_"
         for i in range(3):
-            file_name = f"RssTruncAuxParams_{i}.pth"
+            file_name = f"{file_name_base}{i}.pth"
             aux_params[i].save(file_path, file_name)
-        # print(file_path)

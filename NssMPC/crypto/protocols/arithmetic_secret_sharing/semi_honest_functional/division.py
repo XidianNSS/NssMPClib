@@ -28,25 +28,40 @@ def secure_div(x, y):
     :rtype: ArithmeticSecretSharing
 
     """
-    div_key = x.party.get_param(DivKey, x.numel())
-    sigma_key = div_key.sigma_key
-    nexp2_key = div_key.neg_exp2_key
+    if x.numel() > y.numel():
+        return x * secure_inv(y)
+    else:
+        neg_exp2_k = get_neg_exp2_k(y)
+        a = x * neg_exp2_k
+        b = y * neg_exp2_k
+        w = b * (-2) + 2.9142
+        e0 = -(b * w) + 1
+        e1 = e0 * e0
 
-    y_shape = y.shape
-    y_shift = x.__class__(sigma_key.r_in, x.party) + y.flatten()
-    y_shift = y_shift.restore()
-    y_shift = y_shift.view(y_shape)
+        return a * w * (e0 + 1) * (e1 + 1)
 
-    y_minus_powers = [y_shift - (2 ** i) for i in range(1, 2 * SCALE_BIT + 1)]
-    k = SigmaDICF.one_key_eval(y_minus_powers, sigma_key, x.party.party_id)
-    k = b2a(k, x.party).sum(dim=0)
-    neg_exp2_k = LookUp.eval(k + 1, nexp2_key.look_up_key, nexp2_key.table)
 
-    a = x * neg_exp2_k
-    b = y * neg_exp2_k
-
+def secure_inv(x):
+    neg_exp2_k = get_neg_exp2_k(x)
+    b = x * neg_exp2_k
     w = b * (-2) + 2.9142
     e0 = -(b * w) + 1
     e1 = e0 * e0
 
-    return a * w * (e0 + 1) * (e1 + 1)
+    return neg_exp2_k * w * (e0 + 1) * (e1 + 1)
+
+
+def get_neg_exp2_k(divisor):
+    div_key = divisor.party.get_param(DivKey, divisor.numel())
+    sigma_key = div_key.sigma_key
+    nexp2_key = div_key.neg_exp2_key
+
+    y_shape = divisor.shape
+    y_shift = divisor.__class__(sigma_key.r_in, divisor.party) + divisor.flatten()
+    y_shift = y_shift.restore()
+    y_shift = y_shift.view(y_shape)
+
+    y_minus_powers = [y_shift - (2 ** i) for i in range(1, 2 * SCALE_BIT + 1)]
+    k = SigmaDICF.one_key_eval(y_minus_powers, sigma_key, divisor.party.party_id)
+    k = b2a(k, divisor.party).sum(dim=0)
+    return LookUp.eval(k + 1, nexp2_key.look_up_key, nexp2_key.table)

@@ -77,7 +77,7 @@ def v_matmul(x, y):
     f = y_hat + b
 
     e_and_f = x.__class__.cat([e.flatten(), f.flatten()], dim=0)
-    common_e_f = e_and_f.restore()
+    common_e_f = open(e_and_f)
     e = common_e_f[:x.numel()].reshape(x.shape)
     f = common_e_f[x.numel():].reshape(y.shape)
 
