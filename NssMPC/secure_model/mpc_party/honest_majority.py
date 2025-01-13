@@ -2,12 +2,10 @@
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
-from NssMPC.crypto.aux_parameter import RssMulTriples, RssMatmulTriples, B2AKey
+from NssMPC.crypto.aux_parameter import RssMulTriples, RssMatmulTriples, B2AKey, MACKey
 from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.vsigma_key import VSigmaKey
 from NssMPC.crypto.aux_parameter.select_keys.vos_key import VOSKey
-# from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functionality import RssTruncAuxParams
 from NssMPC.crypto.aux_parameter.truncation_keys.rss_trunc_aux_param import RssTruncAuxParams
-from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.compare import MACKey
 from NssMPC.secure_model.mpc_party.party import Party3PC
 from NssMPC.secure_model.utils.param_provider.matrix_beaver_provider import RssMatrixBeaverProvider
 from NssMPC.secure_model.utils.param_provider.os_provider import OSProvider
@@ -57,17 +55,6 @@ class HonestMajorityParty(Party3PC):
         self.virtual_party_with_previous.load_aux_params()
         self.virtual_party_with_next.load_aux_params()
 
-    def set_comparison_provider(self):
-        """
-        Set up comparison provider.
-
-        Provide the key providers (such as MACKey and MaliciousCMPKey) needed to add comparisons for the current
-        participant and their preceding and following participants.
-        """
-        self.append_provider(ParamProvider(MACKey))
-        self.virtual_party_with_previous.append_provider(ParamProvider(VSigmaKey))
-        self.virtual_party_with_next.append_provider(ParamProvider(VSigmaKey))
-
     def set_oblivious_selection_provider(self):
         """
         Set up the blind selection provider. Provide blind selection of key providers for participants and their nearby virtual participants.
@@ -84,7 +71,7 @@ class HonestMajorityParty(Party3PC):
         self.append_provider(
             OSProvider(VOSKey, saved_name=f'VOSKey_{self.party_id}_1', param_tag=f'VOSKey_{self.party_id}_1'))
 
-    def set_conditional_oblivious_selection_provider(self):
+    def set_comparison_provider(self):
         """
         Set up conditional oblivious selection provider.
 

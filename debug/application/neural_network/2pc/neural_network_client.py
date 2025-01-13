@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
     indices = list(range(1024))
     subset_data = Subset(test_set, indices)
-    test_loader = torch.utils.data.DataLoader(subset_data, batch_size=16, shuffle=False, num_workers=0)
+    test_loader = torch.utils.data.DataLoader(subset_data, batch_size=1, shuffle=False, num_workers=0)
 
     net = AlexNet()
 
@@ -55,5 +55,5 @@ if __name__ == '__main__':
         print('Accuracy of the network on test images:{}%'.format(100 * correct / total))
 
     print('Accuracy of the network on test images:{}%'.format(100 * correct_total / total_total))
-    time.sleep(2)
-    # client.close()
+
+    client.close()

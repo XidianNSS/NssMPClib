@@ -17,16 +17,10 @@ if __name__ == '__main__':
     num = server.dummy_model(net)
 
     net = nn.utils.load_model(net, shared_param)
-    # with torch.profiler.profile(
-    #         schedule=torch.profiler.schedule(wait=0, warmup=1, active=2),
-    #         on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/test'),
-    #         record_shapes=False,
-    #         profile_memory=False,
-    #         with_stack=True
-    # ) as prof:
+
     while num:
         shared_data = server.receive()
         server.inference(net, shared_data)
         num -= 1
-        # prof.step()
-    # server.close()
+
+    server.close()

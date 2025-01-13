@@ -1,10 +1,7 @@
-from NssMPC.config import VCMP_SPLIT_LEN
 from NssMPC.crypto.aux_parameter import *
 from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.vsigma_key import VSigmaKey
 from NssMPC.crypto.aux_parameter.select_keys.vos_key import VOSKey
-# from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functionality import RssTruncAuxParams
 from NssMPC.crypto.aux_parameter.truncation_keys.rss_trunc_aux_param import RssTruncAuxParams
-from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.compare import MaliciousCMPKey, MACKey
 
 gen_num = 100
 
@@ -23,10 +20,6 @@ RssTruncAuxParams.gen_and_save(gen_num)
 B2AKey.gen_and_save(gen_num)
 TanhKey.gen_and_save(gen_num)
 MACKey.gen_and_save(gen_num)
-
-MaliciousCMPKey.gen_and_save(gen_num, 'MaliciousCMPKey_0', VCMP_SPLIT_LEN)
-MaliciousCMPKey.gen_and_save(gen_num, 'MaliciousCMPKey_1', VCMP_SPLIT_LEN)
-MaliciousCMPKey.gen_and_save(gen_num, 'MaliciousCMPKey_2', VCMP_SPLIT_LEN)
 
 VOSKey.gen_and_save(gen_num, 'VOSKey_0')
 VOSKey.gen_and_save(gen_num, 'VOSKey_1')

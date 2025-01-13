@@ -9,12 +9,12 @@ For reference, see the `paper <https://link.springer.com/chapter/10.1007/978-3-0
 from NssMPC import RingTensor
 from NssMPC.common.utils.common_utils import list_rotate
 from NssMPC.config import DEVICE
+from NssMPC.crypto.aux_parameter import MACKey
 from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.vsigma_key import VSigmaKey
-from NssMPC.crypto.primitives import ReplicatedSecretSharing
 from NssMPC.crypto.primitives.function_secret_sharing.vsigma import VSigma
 
 from NssMPC.crypto.protocols.arithmetic_secret_sharing.semi_honest_functional import b2a
-from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional import recon, MACKey
+from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional import recon
 
 
 def msb_with_os_without_mac_check(x, share_table=None):
@@ -23,8 +23,8 @@ def msb_with_os_without_mac_check(x, share_table=None):
     num = x.shape[0]
     party = x.party
 
-    self_rdx1, _, _ = party.get_param(f'VSigmaKey_{party.party_id}_0', num)
-    self_rdx0, _, _ = party.get_param(f'VSigmaKey_{party.party_id}_1', num)
+    self_rdx0, _, _ = party.get_param(f'VSigmaKey_{party.party_id}_0', num)
+    self_rdx1, _, _ = party.get_param(f'VSigmaKey_{party.party_id}_1', num)
     next_party = party.virtual_party_with_next
     pre_party = party.virtual_party_with_previous
     key_from_next = next_party.get_param(VSigmaKey, num)
@@ -32,9 +32,10 @@ def msb_with_os_without_mac_check(x, share_table=None):
     rdx1, k1, c1 = key_from_previous
     rdx0, k0, c0 = key_from_next
 
-    rdx_list = [ReplicatedSecretSharing([self_rdx1.item, self_rdx0.item], party),
-                ReplicatedSecretSharing([RingTensor.convert_to_ring(0), rdx1.item], party),
-                ReplicatedSecretSharing([rdx0.item, RingTensor.convert_to_ring(0)], party)]
+    rdx_list = [x.__class__([self_rdx0.item, self_rdx1.item], party),
+                x.__class__([RingTensor.convert_to_ring(0), rdx1.item], party),
+                x.__class__([rdx0.item, RingTensor.convert_to_ring(0)], party)
+                ]
 
     rdx_list = list_rotate(rdx_list, party.party_id)
 
@@ -77,17 +78,16 @@ def msb_with_os_without_mac_check(x, share_table=None):
         share_table = share_table[0]
         smac_table = share_table[1]
         mac_key = None
+    v1 = (share_table.item[0] * v1_a.item)
+    v2 = (share_table.item[1] * v2_a.item)
 
-    v1 = (RingTensor.mul(share_table.item[0], v1_a.item)).sum(-1)
-    v2 = (RingTensor.mul(share_table.item[1], v2_a.item)).sum(-1)
-
-    mac_v1 = (smac_table.item[0] * v1_a.item).sum(-1)
-    mac_v2 = (smac_table.item[1] * v2_a.item).sum(-1)
+    mac_v1 = RingTensor.mul(smac_table.item[0], v1_a.item)
+    mac_v2 = RingTensor.mul(smac_table.item[1], v2_a.item)
 
     v = v1 + v2
     mac_v = mac_v1 + mac_v2
 
-    v = ReplicatedSecretSharing.reshare(v, party)
-    mac_v = ReplicatedSecretSharing.reshare(mac_v, party)
+    v = x.__class__.reshare(v, party)
+    mac_v = x.__class__.reshare(mac_v, party)
 
     return v.reshape(shape), mac_v.reshape(shape), mac_key

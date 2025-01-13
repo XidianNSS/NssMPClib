@@ -66,9 +66,9 @@ class PRG(object):
         """
         if isinstance(seeds, RingTensor):
             self.dtype = seeds.dtype
-            self._prg.set_seeds(seeds.tensor)
+            self._prg.set_seeds(seeds.tensor.contiguous())
         elif isinstance(seeds, torch.Tensor):
-            self._prg.set_seeds(seeds)
+            self._prg.set_seeds(seeds.contiguous())
 
     def bit_random_tensor(self, bits, device=None):
         """

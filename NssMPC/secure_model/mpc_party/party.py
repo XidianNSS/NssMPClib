@@ -4,11 +4,10 @@
 
 """
 For normal communication, Communicator is set to NCommunicator.
-For multi-threaded communication, Communicator is set to MCommunicator.
+For multi-thread communication, Communicator is set to MCommunicator.
 """
 import random
 import time
-from abc import ABCMeta, abstractmethod
 from multiprocessing import Pipe, Lock
 
 from NssMPC.common.random.prg import MT19937_PRG

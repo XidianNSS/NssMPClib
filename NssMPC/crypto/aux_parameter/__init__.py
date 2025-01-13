@@ -8,7 +8,8 @@ from .function_secret_sharing_keys import DCFKey, DPFKey, DICFKey, GrottoDICFKey
 from .look_up_table_keys import DivKey, ReciprocalSqrtKey, GeLUKey, TanhKey
 from .truncation_keys import Wrap
 from .b2a_keys import B2AKey
+from .mac_keys import MACKey
 
 __all__ = ['Parameter', 'AssMulTriples', 'MatmulTriples', 'RssMulTriples', 'RssMatmulTriples', 'BooleanTriples',
            'DCFKey', 'DPFKey', 'DICFKey', 'GrottoDICFKey', 'SigmaDICFKey', 'DivKey', 'ReciprocalSqrtKey', 'GeLUKey',
-           'Wrap', 'B2AKey', 'TanhKey']
+           'Wrap', 'B2AKey', 'TanhKey', 'MACKey']

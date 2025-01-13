@@ -5,7 +5,7 @@
 import os
 from importlib import resources
 
-__data_path = os.path.expanduser('~/.NssMPClib')
+__data_path = os.path.expanduser('~/.NssMPClib/')
 if not os.path.exists(__data_path):
     os.makedirs(__data_path)
 

@@ -6,9 +6,10 @@ import json
 import os
 
 import torch
+from NssMPC.config import __data_path
 
 # root path
-base_path = os.path.expanduser('~/.NssMPClib/')
+base_path = __data_path
 
 # config path
 config_path = base_path + 'config.json'
