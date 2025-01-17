@@ -10,8 +10,6 @@ from NssMPC.crypto.protocols.arithmetic_secret_sharing.semi_honest_functional im
     secure_div, secure_eq, secure_ge, secure_exp, secure_reciprocal_sqrt, truncate, secure_tanh
 
 
-# TODO: add reference
-
 class ArithmeticSecretSharing(ArithmeticBase):
     """
     A class for arithmetic secret sharing over a RingTensor.
@@ -77,12 +75,12 @@ class ArithmeticSecretSharing(ArithmeticBase):
         :returns: None
         :raises TypeError: If `value` is not of a supported type(`ASS`).
         """
-        if isinstance(value, ArithmeticSecretSharing):  # setitem时只能用
-            self.item[key] = value.item.clone()  # 应该clone一个value的RingTensor，而不是使两个item都指向同一个RingTensor
+        if isinstance(value, ArithmeticSecretSharing):
+            self.item[key] = value.item.clone()
         else:
             raise TypeError(f"unsupported operand type(s) for setitem '{type(self)}' and {type(value)}")
 
-    def __str__(self):  # 在打印该类的实例的时候调用
+    def __str__(self):
         """
         Returns a string representation of the ASS instance.
 
@@ -93,61 +91,24 @@ class ArithmeticSecretSharing(ArithmeticBase):
         return f"ArithmeticSecretSharing[\n{self.item}\n party:{self.party.party_id}\n]"
 
     def __add__(self, other):
-        """
-        Adds an ASS object with a corresponding type.
-
-        :param other: The object to be added.
-        :type other: ArithmeticSecretSharing or RingTensor or int or float
-        :returns: A new ASS instance representing the result.
-        :rtype: ArithmeticSecretSharing
-        :raises TypeError: If `other` is not of a supported type.
-        """
         if isinstance(other, ArithmeticSecretSharing):
             new_tensor = self.item + other.item
             return ArithmeticSecretSharing(new_tensor, self.party)
-        elif isinstance(other, RingTensor):  # for RingTensor, only party 0 add it to the share tensor
-            if self.party.party_id == 0:  # 如果加的是RingTensor，代表其是没有经过share的，也就只有一方需要加上它。
+        elif isinstance(other, RingTensor):  # for RingTensor or const number, only party 0 add it to the share tensor
+            if self.party.party_id == 0:
                 new_tensor = self.item + other
             else:
                 new_tensor = self.item + RingTensor.zeros_like(other)
             return ArithmeticSecretSharing(new_tensor, self.party)
         elif isinstance(other, (int, float)):
-            other = RingTensor.convert_to_ring(
-                int(other * self.scale))  # 这里是否要乘scale仅由self决定，因为要保证小数点对齐，那么相当于把convert_to_ring这里乘scale这一步拿了出来，所以要外面加int，保证convert时不再乘scale
+            other = RingTensor.convert_to_ring(int(other * self.scale))
             return self + other
         else:
             raise TypeError(f"unsupported operand type(s) for + '{type(self)}' and {type(other)}")
 
-    def __radd__(self,
-                 other):  # 当左侧不是ASS的特殊类型，而是比方说int等普通类型，那么返回NotImplemented时，会调用右侧ASS的radd，这里return再调用add，实现相加，解决了左侧是非ASS类型的情况
-        """
-        Perform right-hand addition for an ASS instance.
-
-        This method handles the case where the left operand is not an ASS instance.
-        It is called when the left operand does not support the addition for an ASS instance,
-        and instead invokes this method for the right-hand operand.
-
-        :param other: The object to be added.
-        :type other: ArithmeticSecretSharing or RingTensor or int or float
-        :returns: A new ASS instance representing the result.
-        :rtype: ArithmeticSecretSharing
-        :raises TypeError: If `other` is not of a supported type.
-        """
-        return self + other
+    __radd__ = __add__
 
     def __iadd__(self, other):
-        """
-        Perform in-place addition for an ASS object.
-
-        This method updates the current instance by adding the value of `other` to it.
-        The in-place addition modifies the existing instance rather than creating a new one.
-
-        :param other: The value to add to the ASS instance.
-        :type other: int or float or RingTensor or ArithmeticSecretSharing
-        :returns: The updated ASS instance.
-        :rtype: ArithmeticSecretSharing
-        :raises TypeError: If `other` is not of a supported type.
-        """
         if isinstance(other, ArithmeticSecretSharing):
             self.item += other.item
         elif isinstance(other, RingTensor):
@@ -162,15 +123,6 @@ class ArithmeticSecretSharing(ArithmeticBase):
         return self
 
     def __sub__(self, other):
-        """
-        Subtracts an ASS object with a corresponding type.
-
-        :param other: The object to subtract.
-        :type other: ArithmeticSecretSharing or RingTensor or int or float
-        :returns: A new ASS instance representing the result.
-        :rtype: ArithmeticSecretSharing
-        :raises TypeError: If `other` is not of a supported type.
-        """
         if isinstance(other, ArithmeticSecretSharing):
             new_tensor = self.item - other.item
             return ArithmeticSecretSharing(new_tensor, self.party)
@@ -187,11 +139,9 @@ class ArithmeticSecretSharing(ArithmeticBase):
             raise TypeError(f"unsupported operand type(s) for - '{type(self)}' and {type(other)}")
 
     def __rsub__(self, other):
-        """Usage and considerations are the same as for the `__radd__` method, with addition replaced by subtraction."""
         return -(self - other)
 
     def __isub__(self, other):
-        """Usage and considerations are the same as for the `__iadd__` method, with addition replaced by subtraction."""
         if isinstance(other, ArithmeticSecretSharing):
             self.item -= other.item
         elif isinstance(other, RingTensor):
@@ -231,14 +181,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
 
         return res / self.scale
 
-    def __rmul__(self, other):
-        """
-        Usage and considerations are the same(while type 'float' is not supported) as for the `__radd__` method, with
-        addition replaced by multiplication.
-        Besides, if other is an ASS instance, it performs a multiplication using
-        the Beaver multiplication protocol :meth:`~NssMPC.crypto.protocols.arithmetic_secret_sharing.semi_honest_functional.multiplication.beaver_mul` for security of the computation.
-        """
-        return self * other
+    __rmul__ = __mul__
 
     def __matmul__(self, other):
         """
@@ -260,6 +203,16 @@ class ArithmeticSecretSharing(ArithmeticBase):
             res = secure_matmul(self, other)
         elif isinstance(other, RingTensor):
             res = ArithmeticSecretSharing(RingTensor.matmul(self.item, other), self.party)
+        else:
+            raise TypeError(f"unsupported operand type(s) for @ '{type(self)}' and {type(other)}")
+
+        return res / self.scale
+
+    def __rmatmul__(self, other):
+        if isinstance(other, ArithmeticSecretSharing):
+            res = secure_matmul(other, self)
+        elif isinstance(other, RingTensor):
+            res = ArithmeticSecretSharing(RingTensor.matmul(other, self.item), self.party)
         else:
             raise TypeError(f"unsupported operand type(s) for @ '{type(self)}' and {type(other)}")
 
@@ -308,14 +261,14 @@ class ArithmeticSecretSharing(ArithmeticBase):
         if isinstance(other, int):
             if other == 1:
                 return self
-            return truncate(self, other)  # 这里的truncate要看；除整数要截断；这里的truncate是先除scale再截断，把scale换做除数other，可达到做除法的效果。
+            return truncate(self, other)
         elif isinstance(other, float):
             if other == 1:
                 return self
             from NssMPC.config import float_scale
-            return (self / int(other * float_scale)) * float_scale  # 先将other转到环上，再转成int循环调用\，再乘scale恢复消掉的scale
+            return (self / int(other * float_scale)) * float_scale
         elif isinstance(other, ArithmeticSecretSharing):
-            return secure_div(self, other)  # secure_div要看，division函数先不看
+            return secure_div(self, other)
         elif isinstance(other, RingTensor):
             return truncate(self * other.scale, other.tensor)
         else:

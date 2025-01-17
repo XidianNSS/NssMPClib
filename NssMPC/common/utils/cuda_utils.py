@@ -42,7 +42,7 @@ def cuda_matmul_32(x, y):
     :returns: the result of x@y, which is an integer matrix.
     :rtype: torch.Tensor
     """
-    tag = 2 ** 24
+    tag = 2 ** 16
 
     x_high = torch.floor(x / tag).to(torch.float64)
     x_low = (x - x_high * tag).to(torch.float64)

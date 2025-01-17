@@ -17,7 +17,6 @@ from NssMPC.crypto.protocols.replicated_secret_sharing.semi_honest_functional im
 from NssMPC.secure_model.mpc_party import HonestMajorityParty
 
 
-# RSS每个参与者拥有多个份额，不同参与者之间份额可重复
 class ReplicatedSecretSharing(ArithmeticBase):
     """
     A class for replicated secret sharing over a RingPair.
@@ -96,7 +95,6 @@ class ReplicatedSecretSharing(ArithmeticBase):
         return f"[{self.__class__.__name__}\n {self.item}]"
 
     def __add__(self, other):
-        # 此处介绍是否要涉及一些原理性的东西
         """
         Adds an RSS object with a corresponding type.
 
@@ -127,6 +125,8 @@ class ReplicatedSecretSharing(ArithmeticBase):
         else:
             raise TypeError("unsupported operand type(s) for + 'ReplicatedSecretSharing' and ", type(other))
 
+    __radd__ = __add__
+
     def __sub__(self, other):
         """
         Subtracts an RSS object with a corresponding type.
@@ -150,7 +150,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
         elif isinstance(other, int):
             other = RingTensor.convert_to_ring(int(other * self.scale))
             if self.party.party_id == 0:
-                return self.__class__(RingPair(self.item[0] - other), self.party)
+                return self.__class__(RingPair(self.item[0] - other, self.item[1]), self.party)
             elif self.party.party_id == 2:
                 return self.__class__(RingPair(self.item[0], self.item[1] - other), self.party)
             else:
@@ -158,8 +158,10 @@ class ReplicatedSecretSharing(ArithmeticBase):
         else:
             raise TypeError("unsupported operand type(s) for - 'ReplicatedSecretSharing' and ", type(other))
 
+    def __rsub__(self, other):
+        return -(self - other)
+
     def __mul__(self, other):
-        # 这里分了party，如何理解，是否要解释
         """
         Multiplies an RSS object with a corresponding type.
         If other is an RSS instance, it performs a multiplication using the v_mul method(ref:v_mul)
@@ -179,14 +181,23 @@ class ReplicatedSecretSharing(ArithmeticBase):
                 return v_mul(self, other)
             else:
                 result = mul_with_out_trunc(self, other)
-                if self.item[0].dtype == "float":
+                if self.dtype == "float":
                     result = truncate(result)
                 return result
-        elif isinstance(other, RingTensor) or isinstance(other, int):
+        elif isinstance(other, RingTensor):
+            result0 = RingTensor.mul(self.item[0], other)
+            result1 = RingTensor.mul(self.item[1], other)
+            result = ReplicatedSecretSharing(RingPair(result0, result1), self.party)
+            if self.dtype == "float":
+                result = truncate(result)
+            return result
+        elif isinstance(other, int):
             result = self.item * other
             return ReplicatedSecretSharing(result, self.party)
         else:
             raise TypeError("unsupported operand type(s) for * 'ReplicatedSecretSharing' and ", type(other))
+
+    __rmul__ = __mul__
 
     def __matmul__(self, other):
         """
@@ -204,7 +215,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
         .. note::
             The input parameter type must be RSS or RingTensor.
         """
-        if isinstance(other, ReplicatedSecretSharing):  # 这里判断party原因是什么，是否需要说明
+        if isinstance(other, ReplicatedSecretSharing):
             if isinstance(self.party, HonestMajorityParty):
                 torch.cuda.empty_cache()
                 return v_matmul(self, other)
@@ -220,15 +231,44 @@ class ReplicatedSecretSharing(ArithmeticBase):
                 torch.cuda.empty_cache()
                 return result
         elif isinstance(other, RingTensor):
-            result0 = self.item[0] @ other
-            result1 = self.item[1] @ other
+            result0 = RingTensor.matmul(self.item[0], other)
+            result1 = RingTensor.matmul(self.item[1], other)
+            result = ReplicatedSecretSharing(RingPair(result0, result1), self.party)
+            if self.dtype == "float":
+                result = truncate(result)
             torch.cuda.empty_cache()
-            return ReplicatedSecretSharing(RingPair(result0, result1), self.party)
+            return result
+        else:
+            raise TypeError("unsupported operand type(s) for @ 'ReplicatedSecretSharing' and ", type(other))
+
+    def __rmatmul__(self, other):
+        if isinstance(other, ReplicatedSecretSharing):
+            if isinstance(self.party, HonestMajorityParty):
+                torch.cuda.empty_cache()
+                return v_matmul(other, self)
+            else:
+                if self.device != other.device:
+                    raise TypeError(
+                        "Expected all ring tensors to be on the same device, but found at least two devices,"
+                        + f" {self.device} and {other.device}!")
+
+                result = matmul_with_out_trunc(other, self)
+                if self.dtype == "float":
+                    result = truncate(result)
+                torch.cuda.empty_cache()
+                return result
+        elif isinstance(other, RingTensor):
+            result0 = RingTensor.matmul(other, self.item[0])
+            result1 = RingTensor.matmul(other, self.item[1])
+            result = ReplicatedSecretSharing(RingPair(result0, result1), self.party)
+            if self.dtype == "float":
+                result = truncate(result)
+            torch.cuda.empty_cache()
+            return result
         else:
             raise TypeError("unsupported operand type(s) for @ 'ReplicatedSecretSharing' and ", type(other))
 
     def __ge__(self, other):
-        # 返回的是否是结果的分享值，以及关于party的判断
         """
         Compare if the RSS instance is greater than or equal to `other`.
 
@@ -385,7 +425,6 @@ class ReplicatedSecretSharing(ArithmeticBase):
 
     @staticmethod
     def gen_and_share(r_tensor, party):
-        # 将秘密分成三份，每人手里一份
         """
         Generate and share the input r_tensor.
 
@@ -493,7 +532,6 @@ class ReplicatedSecretSharing(ArithmeticBase):
 
     @classmethod
     def rand_like(cls, x, party):
-        # 判断类型原因何在,输入x的类型如何确定。
         """
         Generate a random RSS with the same shape as input *x*.
 
@@ -509,77 +547,4 @@ class ReplicatedSecretSharing(ArithmeticBase):
         r = ReplicatedSecretSharing.random(x.shape, party)
         if isinstance(x, (RingTensor, ReplicatedSecretSharing)):
             r.dtype = x.dtype
-        return r
-
-    @classmethod
-    def empty(cls, shape, dtype='int', party=None):
-        """
-        Generate an RSS of the specified shape with all values uninitialized.
-
-        We use this method to generate an uninitialized RSS with specified shape.
-
-        .. note::
-            Remember to specify the data type of the RSS, either **int** or **float**, with **int** as the default.
-
-        :param shape: The tuple representing the desired shape of the RSS.
-        :type shape: tuple
-        :param dtype: The data type of the generated RSS.
-        :type dtype: str
-        :param party: The party that holds the RSS result, which is None by default.
-        :type party: Party
-        :return: The generated empty RSS.
-        :rtype: ReplicatedSecretSharing
-        """
-        r_0 = RingTensor.empty(shape, dtype)
-        r_1 = RingTensor.empty(shape, dtype)
-        return cls([r_0, r_1], party)  # 这里的r并不是list，而是一个RingTensor
-
-    @classmethod
-    def empty_like(cls, x, party=None):
-        # 同上的类型问题
-        # TO DO: What's the type of input x.
-
-        r = ReplicatedSecretSharing.empty(x.shape, x.dtype)
-        r.party = party if party else x.party  # RingTensor似乎没有party属性，party是怎么参与条件判断的
-        return r
-
-    @classmethod
-    def zeros(cls, shape, dtype='int', party=None):
-        """
-        Generate an RSS of the specified shape with all values set to zero.
-
-        We use this method to generate a zero RSS with specified shape.
-
-        .. note::
-            Remember to specify the data type of the RSS, either **int** or **float**, with **int** as the default.
-
-        :param shape: The tuple representing the desired shape of the RSS.
-        :type shape: tuple or list
-        :param dtype: The data type of the generated RSS.
-        :type dtype: str
-        :param party: The party that holds the RSS result, which is None by default.
-        :type party: Party
-        :return: The generated empty RSS.
-        :rtype: ReplicatedSecretSharing
-        """
-        r_0 = RingTensor.zeros(shape, dtype)
-        r_1 = RingTensor.zeros(shape, dtype)
-        return cls([r_0, r_1], party)
-
-    @classmethod
-    def zeros_like(cls, tensor, dtype='int', party=None):
-        """
-        Generate an RSS with the same shape as the input *x*, with all values set to zero.
-
-        We use this method to generate an RSS with the same shape as input *x*, with all values set to zero.
-
-        :param tensor: The input whose shape will be used to generate the empty RSS.
-        :type tensor:
-        :param party: The party that holds the empty RSS.
-        :type party: Party
-        :returns: The RSS instance with the same shape as *x*.
-        :rtype: ReplicatedSecretSharing
-        """
-        r = ReplicatedSecretSharing.zeros(tensor.shape, dtype)
-        r.party = party if party else tensor.party
         return r

@@ -314,8 +314,7 @@ class RingTensor(object):
             else:
                 new_value = torch.matmul(self.tensor, other.tensor) // self.scale
         else:
-            raise TypeError(
-                "unsupported operand type(s) for @ 'RingTensor' and ", type(other), 'please convert to ring first')
+            return NotImplemented
         return self.__class__(new_value, self.dtype, self.device)
 
     def __truediv__(self, other):

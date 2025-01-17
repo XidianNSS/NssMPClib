@@ -110,7 +110,7 @@ class HonestMajorityParty(Party3PC):
         """
         self.append_provider(ParamProvider(RssMulTriples))
         self.append_provider(RssMatrixBeaverProvider(party=self))
-        # self.append_provider(Wrap)
+        self.set_trunc_provider()
 
     def set_trunc_provider(self):
         """
