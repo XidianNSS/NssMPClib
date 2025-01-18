@@ -31,6 +31,6 @@ def truncate(share, scale=SCALE):
     r.dtype = 'float'
     delta_share = share - r
     delta = open(delta_share)
-    delta_trunc = delta // SCALE
+    delta_trunc = delta // scale
     result = r_t + delta_trunc
     return result.reshape(shape)

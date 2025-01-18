@@ -73,7 +73,7 @@ class RssTruncAuxParams(Parameter):
         :return: The generated parameters for three parties.
         :rtype: List[RssTruncAuxParams]
         """
-        aux_params = cls.gen(num)
+        aux_params = cls.gen(num, scale)
         file_path = f"{param_path}{cls.__name__}/"
         if not os.path.exists(file_path):
             os.makedirs(file_path)
