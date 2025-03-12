@@ -48,7 +48,7 @@ def secure_inv(x):
     e0 = -(b * w) + 1
     e1 = e0 * e0
 
-    return neg_exp2_k * w * (e0 + 1) * (e1 + 1)
+    return w * neg_exp2_k * (e0 + 1) * (e1 + 1)
 
 
 def get_neg_exp2_k(divisor):
