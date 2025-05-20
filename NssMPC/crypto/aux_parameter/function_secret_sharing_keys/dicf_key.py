@@ -194,9 +194,12 @@ class SigmaDICFKey(Parameter):
         k0.r_in = RingTensor.random([num_of_keys], down_bound=-2 ** (bit_len - 1), upper_bound=2 ** (bit_len - 1) - 1)
         k1.r_in = RingTensor.random([num_of_keys], down_bound=-2 ** (bit_len - 1), upper_bound=2 ** (bit_len - 1) - 1)
         r_in = k0.r_in + k1.r_in
+        if bit_len < BIT_LEN:
+            r_in = RingTensor.where(r_in > 2 ** (bit_len - 1) - 1, r_in - 2 ** bit_len, r_in)
+            r_in = RingTensor.where(r_in < -2 ** (bit_len - 1), r_in + 2 ** bit_len, r_in)
         r_in.bit_len = bit_len
 
-        y1 = r_in % (HALF_RING - 1)
+        y1 = r_in % (2 ** (bit_len - 1) - 1)
         k0.dpf_key, k1.dpf_key = DPFKey.gen(num_of_keys, y1, RingTensor(1))
         c = r_in.signbit()
         c0 = RingTensor.random([num_of_keys], down_bound=0, upper_bound=2)

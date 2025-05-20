@@ -933,6 +933,23 @@ class RingTensor(object):
                       32: {'int': torch.int32, 'float': torch.float32}}
         return (self.tensor / self.scale).to(torch_type[BIT_LEN][self.dtype])
 
+    def convert_to_range(self, bit_len):
+        """
+        Convert the RingTensor to the ring of a specified bit length.
+
+        :param bit_len: The specified bit length
+        :type bit_len: int
+        :return: The RingTensor after conversion
+        :rtype: RingTensor
+        """
+        mod = 2 ** bit_len
+        half_ring = 2 ** (bit_len - 1)
+
+        self.tensor %= mod
+        self.tensor = torch.where(self.tensor >= half_ring, self.tensor - mod, self.tensor)
+        self.bit_len = bit_len
+        return self
+
     def sum(self, dim=0):
         """
         Sums tensors over a specified dimension.
