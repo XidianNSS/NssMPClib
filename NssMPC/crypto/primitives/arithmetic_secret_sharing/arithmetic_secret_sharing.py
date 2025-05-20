@@ -176,6 +176,9 @@ class ArithmeticSecretSharing(ArithmeticBase):
             res = ArithmeticSecretSharing(RingTensor.mul(self.item, other), self.party)
         elif isinstance(other, int):
             return ArithmeticSecretSharing(self.item * other, self.party)
+        elif isinstance(other, float):
+            assert self.dtype == 'float', "only float can calculate with float"
+            res = ArithmeticSecretSharing(self.item * int(other * self.scale), self.party)
         else:
             raise TypeError(f"unsupported operand type(s) for * '{type(self)}' and {type(other)}")
 
