@@ -20,24 +20,20 @@ def v_mul(x, y):
     :return: An RSS sharing ⟨x*y⟩
     :rtype: ReplicatedSecretSharing
     """
-    shape = x.shape if x.numel() > y.numel() else y.shape
-    x = x.expand(shape).flatten()
-    y = y.expand(shape).flatten()
     ori_type = x.dtype
     res = mul_with_out_trunc(x, y)
 
-    a, b, c = x.party.get_param(RssMulTriples, res.numel())
+    a, b, c = x.party.get_param(RssMulTriples, res.numel())  # TODO: need fix, get triples based on x.shape and y.shape
     x_hat = x.clone()
     y_hat = y.clone()
 
     a.dtype = b.dtype = c.dtype = x_hat.dtype = y_hat.dtype = 'int'
     e = x_hat + a
     f = y_hat + b
-    e_and_f = x.__class__.cat([e, f], dim=0)
+    e_and_f = x.__class__.cat([e.flatten(), f.flatten()], dim=0)
     common_e_f = open(e_and_f)
-    length = common_e_f.shape[0] // 2
-    e = common_e_f[:length]
-    f = common_e_f[length:]
+    e = common_e_f[:x.numel()].reshape(x.shape)
+    f = common_e_f[x.numel():].reshape(y.shape)
 
     check = -c + b * e + a * f - e * f
 
@@ -46,7 +42,7 @@ def v_mul(x, y):
     if ori_type == 'float':
         res = truncate(res)
 
-    return res.reshape(shape)
+    return res
 
 
 def v_matmul(x, y):
