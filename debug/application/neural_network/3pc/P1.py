@@ -1,6 +1,3 @@
-import torch
-import torch.utils.data
-
 import NssMPC.application.neural_network as nn
 from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional import *
 from data.AlexNet.Alexnet import AlexNet

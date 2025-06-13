@@ -76,6 +76,6 @@ class SecEmbedding(torch.nn.Module):
         :return: A tensor that contains an embedded vector.
         :rtype: ArithmeticSecretSharing or ReplicatedSecretSharing
         """
-        weight = torch2share(self.weight, x.__class__, x.dtype, x.party)
+        weight = torch2share(self.weight, x.__class__, x.dtype)
         z = x @ weight
         return z

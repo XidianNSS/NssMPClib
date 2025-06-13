@@ -3,12 +3,14 @@
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 from NssMPC.common.ring import RingTensor
+from NssMPC.config import DEVICE
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.protocols.boolean_secret_sharing.semi_honest_functional.semi_honest_functional import beaver_and
 from NssMPC.common.ring import *
-from NssMPC.crypto.primitives.arithmetic_secret_sharing.arithmetic_secret_sharing import ArithmeticBase
+from NssMPC.crypto.primitives.arithmetic_secret_sharing.arithmetic_secret_sharing import SecretSharingBase
 
 
-class BooleanSecretSharing(ArithmeticBase):
+class BooleanSecretSharing(SecretSharingBase):
     """
 
     A class for Boolean secret sharing, supporting various operations over boolean secret shared RingTensor.
@@ -18,9 +20,6 @@ class BooleanSecretSharing(ArithmeticBase):
 
     :param ring_tensor: The RingTensor used for boolean secret sharing.
     :type ring_tensor: RingTensor
-    :param party: The party holding the `BooleanSharedRingTensor`.
-    :type party: Party
-
     :raises AssertionError: If `ring_tensor` is not an instance of `RingTensor`.
 
     .. note::
@@ -29,38 +28,20 @@ class BooleanSecretSharing(ArithmeticBase):
 
     """
 
-    def __init__(self, ring_tensor, party=None):
+    def __init__(self, ring_tensor):
         """
         Initializes an BSS object.
 
         :param ring_tensor: The RingTensor used for boolean secret sharing.
         :type ring_tensor: RingTensor
-        :param party: The party holding the `BooleanSharedRingTensor`.
-        :type party: Party
-
         """
         assert isinstance(ring_tensor, RingTensor), "ring_tensor must be a RingTensor"
-        super().__init__(ring_tensor, party)
+        super().__init__(ring_tensor)
 
     @property
     def ring_tensor(self):
         """Get ring_tensor from an BSS instance."""
         return self.item
-
-    @property
-    def T(self):
-        """Returns an BSS instance with its dimensions reversed."""
-        return self.__class__(self.item.T, self.party)
-
-    def __str__(self):
-        """
-        Returns a string representation of the BSS instance.
-
-        :returns: A string that represents the BSS instance.
-        :rtype: str
-
-        """
-        return f"ArithmeticSecretSharing[\n{self.item}\n party:{self.party.party_id}\n]"
 
     def __invert__(self):
         """
@@ -69,11 +50,12 @@ class BooleanSecretSharing(ArithmeticBase):
         :return: A new `BooleanSecretSharing` object with the inverted RingTensor.
         :rtype: BooleanSecretSharing
         """
-        if self.party.party_id == 0:
+        party = PartyRuntime.party
+        if party.party_id == 0:
             new_tensor = ~self.item
-            return BooleanSecretSharing(new_tensor, self.party)
+            return BooleanSecretSharing(new_tensor)
         else:
-            return BooleanSecretSharing(self.item, self.party)
+            return BooleanSecretSharing(self.item)
 
     def __and__(self, other):
         """
@@ -92,9 +74,9 @@ class BooleanSecretSharing(ArithmeticBase):
         """
         if isinstance(other, BooleanSecretSharing):
             new_tensor = beaver_and(self, other)
-            return BooleanSecretSharing(new_tensor, self.party)
+            return BooleanSecretSharing(new_tensor)
         elif isinstance(other, RingTensor):
-            return BooleanSecretSharing(self.item & other, self.party)
+            return BooleanSecretSharing(self.item & other)
         else:
             raise TypeError(f"unsupported operand type(s) for + '{type(self)}' and {type(other)}")
 
@@ -114,7 +96,7 @@ class BooleanSecretSharing(ArithmeticBase):
         :rtype: BooleanSecretSharing
         """
         result = RingTensor.cat([e.item for e in tensor_list], dim)
-        return cls(result, tensor_list[0].party)
+        return cls(result)
 
     @classmethod
     def stack(cls, tensor_list, dim=0):
@@ -132,7 +114,7 @@ class BooleanSecretSharing(ArithmeticBase):
         :rtype: BooleanSecretSharing
         """
         result = RingTensor.stack([e.item for e in tensor_list], dim)
-        return cls(result, tensor_list[0].party)
+        return cls(result)
 
     @classmethod
     def roll(cls, input, shifts, dims=0):
@@ -152,7 +134,7 @@ class BooleanSecretSharing(ArithmeticBase):
         :rtype: BooleanSecretSharing
         """
         result = RingTensor.roll(input.item, shifts, dims)
-        return cls(result, input.party)
+        return cls(result)
 
     @classmethod
     def rotate(cls, input, shifts):
@@ -170,7 +152,7 @@ class BooleanSecretSharing(ArithmeticBase):
         :rtype: BooleanSecretSharing
         """
         result = RingTensor.rotate(input.item, shifts)
-        return cls(result, input.party)
+        return cls(result)
 
     @staticmethod
     def restore_from_shares(share_0, share_1):
@@ -197,9 +179,9 @@ class BooleanSecretSharing(ArithmeticBase):
          :returns: The reconstructed original data as a RingTensor.
          :rtype: RingTensor
          """
-
-        self.party.send(self)
-        other = self.party.receive()
+        party = PartyRuntime.party
+        party.send(self)
+        other = party.receive()
         return self.item ^ other.item
 
     @staticmethod
@@ -213,8 +195,6 @@ class BooleanSecretSharing(ArithmeticBase):
 
         :param x: The RingTensor to be secret-shared.
         :type x: RingTensor
-        :param bit_len: The bit length of the input 'x'.
-        :type bit_len: int
         :param num_of_party: The number of parties to distribute the shares.
         :type num_of_party: int
         :returns: A list of RingTensor shares, one for each party.
@@ -229,7 +209,7 @@ class BooleanSecretSharing(ArithmeticBase):
         x_0 = x.clone()
 
         for i in range(num_of_party - 1):
-            x_i = RingTensor.random(x.shape, down_bound=0, upper_bound=2, device='cpu')
+            x_i = RingTensor.random(x.shape, down_bound=0, upper_bound=2, device=DEVICE)
             share_x.append(x_i)
             x_0 ^= x_i
         share_x.append(x_0)

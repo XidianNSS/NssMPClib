@@ -295,8 +295,8 @@ def gen_mat_beaver(dummy_input, model, num_of_triples, num_of_party=2):
         :param module: The current layer
         :type module: torch.nn.Module
         :param hook: Forward hook
-        :type hook: list
-        :return: List of registered hooks.
+        :type hook: func
+        :return: a function registered a hook.
         :rtype: list
         """
         hooks = []

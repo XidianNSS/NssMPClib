@@ -24,7 +24,7 @@ def img2col_for_conv(img, k_size: int, stride: int):
     :rtype: RingTensor or ArithmeticSecretSharing or ReplicatedSecretSharing
     """
     col, batch, out_size, _ = img.item.img2col(k_size, stride)
-    return img.__class__(col.reshape((batch, -1, out_size)), img.party)
+    return img.__class__(col.reshape((batch, -1, out_size)))
 
 
 def img2col_for_pool(img, k_size: int, stride: int):
@@ -43,10 +43,10 @@ def img2col_for_pool(img, k_size: int, stride: int):
     :rtype: RingTensor or ArithmeticSecretSharing or ReplicatedSecretSharing
     """
     col, batch, out_size, channel = img.item.img2col(k_size, stride)
-    return img.__class__(col.reshape((batch, channel, -1, out_size)), img.party)
+    return img.__class__(col.reshape((batch, channel, -1, out_size)))
 
 
-def torch2share(param, share_type, dtype, party):
+def torch2share(param, share_type, dtype):
     """
     Convert the parameters into a shared form so they can be used in secure multi-party computation.
 
@@ -60,15 +60,13 @@ def torch2share(param, share_type, dtype, party):
     :type share_type: ArithmeticSecretSharing or ReplicatedSecretSharing
     :param dtype: Data type, specifying the type of the tensor.
     :type dtype: str or dtype
-    :param party: The participant's information indicates the owner of the data.
-    :type party: str or dtype
     :return: Parameters after conversion form
     :rtype: ArithmeticSecretSharing or ReplicatedSecretSharing
     :raises ValueError: If ``share_type`` is invalid
     """
     if share_type == ArithmeticSecretSharing:
-        return ArithmeticSecretSharing(RingTensor(param, dtype), party)
+        return ArithmeticSecretSharing(RingTensor(param, dtype))
     elif share_type == ReplicatedSecretSharing:
-        return ReplicatedSecretSharing([RingTensor(param[0], dtype), RingTensor(param[1], dtype)], party)
+        return ReplicatedSecretSharing([RingTensor(param[0], dtype), RingTensor(param[1], dtype)])
     else:
         raise ValueError("Unknown share type!")

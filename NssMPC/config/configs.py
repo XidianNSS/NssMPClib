@@ -20,7 +20,7 @@ BIT_LEN = config['BIT_LEN']
 LAMBDA = config['LAMBDA']
 GE_TYPE = config['GE_TYPE']
 PRG_TYPE = config['PRG_TYPE']
-DEVICE = config['DEVICE']
+DEVICE = os.environ.get('DEVICE') if os.environ.get('DEVICE') else config['DEVICE']
 DEBUG_LEVEL = config['DEBUG_LEVEL']
 DTYPE = config['DTYPE']
 SOCKET_TYPE = config['SOCKET_TYPE']  # 0: Normal   1: Multi-threaded
@@ -32,7 +32,7 @@ HALF_RING = 2 ** (BIT_LEN - 1)
 assert DEBUG_LEVEL in (0, 1, 2)
 assert BIT_LEN in (64, 32)
 assert GE_TYPE in ('MSB', 'DICF', 'PPQ', 'SIGMA')
-assert DEVICE in ('cuda', 'cpu', 'cuda:0', 'cuda:1')
+# assert DEVICE in ('cuda', 'cpu', 'cuda:0', 'cuda:1')
 data_type = torch.int64 if BIT_LEN == 64 else torch.int32  # Only support BIT_LEN = 64 or 32
 
 # Fixed Point Setting

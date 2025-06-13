@@ -3,6 +3,7 @@
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 from NssMPC import RingTensor
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.aux_parameter import AssMulTriples, MatmulTriples
 
 
@@ -21,7 +22,8 @@ def beaver_mul(x, y):
     :rtype: ArithmeticSecretSharing
 
     """
-    a, b, c = x.party.get_param(AssMulTriples, x.numel())  # TODO: need fix, get triples based on x.shape and y.shape
+    party = PartyRuntime.party
+    a, b, c = party.get_param(AssMulTriples, x.numel())  # TODO: need fix, get triples based on x.shape and y.shape
     a.dtype = b.dtype = c.dtype = x.dtype
     e = x - a
     f = y - b
@@ -31,12 +33,12 @@ def beaver_mul(x, y):
     common_e = common_e_f[:x.numel()].reshape(x.shape)
     common_f = common_e_f[x.numel():].reshape(y.shape)
 
-    res1 = RingTensor.mul(common_e, common_f) * x.party.party_id
+    res1 = RingTensor.mul(common_e, common_f) * party.party_id
     res2 = RingTensor.mul(a.item, common_f)
     res3 = RingTensor.mul(common_e, b.item)
     res = res1 + res2 + res3 + c.item
 
-    res = x.__class__(res, x.party)
+    res = x.__class__(res)
     return res
 
 
@@ -56,7 +58,8 @@ def secure_matmul(x, y):
     :rtype: ArithmeticSecretSharing
 
     """
-    a_matrix, b_matrix, c_matrix = x.party.get_param(MatmulTriples, x.shape, y.shape)
+    party = PartyRuntime.party
+    a_matrix, b_matrix, c_matrix = party.get_param(MatmulTriples, x.shape, y.shape)
 
     e = x - a_matrix
     f = y - b_matrix
@@ -70,8 +73,8 @@ def secure_matmul(x, y):
     res2 = RingTensor.matmul(common_e, b_matrix.item)
     res3 = RingTensor.matmul(a_matrix.item, common_f)
 
-    res = res1 * x.party.party_id + res2 + res3 + c_matrix.item
+    res = res1 * party.party_id + res2 + res3 + c_matrix.item
 
-    res = x.__class__(res, x.party)
+    res = x.__class__(res)
 
     return res

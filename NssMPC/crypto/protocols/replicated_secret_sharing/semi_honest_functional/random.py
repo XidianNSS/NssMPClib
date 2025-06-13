@@ -26,7 +26,7 @@ def rand(shape, party):
     r_0 = party.prg_0.random(num_of_value)
     r_1 = party.prg_1.random(num_of_value)
     from NssMPC.crypto.primitives.arithmetic_secret_sharing import ReplicatedSecretSharing
-    r = ReplicatedSecretSharing([r_0, r_1], party)
+    r = ReplicatedSecretSharing([r_0, r_1])
     r = r.reshape(shape)
     return r
 

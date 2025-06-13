@@ -9,6 +9,7 @@ For reference, see the `paper <https://link.springer.com/chapter/10.1007/978-3-0
 from NssMPC import RingTensor
 from NssMPC.common.utils.common_utils import list_rotate
 from NssMPC.config import DEVICE
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.aux_parameter import MACKey
 from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.vsigma_key import VSigmaKey
 from NssMPC.crypto.primitives.function_secret_sharing.vsigma import VSigma
@@ -21,7 +22,7 @@ def msb_with_os_without_mac_check(x, share_table=None):
     shape = x.shape
     x = x.reshape(-1, 1)
     num = x.shape[0]
-    party = x.party
+    party = PartyRuntime.party
 
     self_rdx0, _, _ = party.get_param(f'VSigmaKey_{party.party_id}_0', num)
     self_rdx1, _, _ = party.get_param(f'VSigmaKey_{party.party_id}_1', num)
@@ -32,9 +33,9 @@ def msb_with_os_without_mac_check(x, share_table=None):
     rdx1, k1, c1 = key_from_previous
     rdx0, k0, c0 = key_from_next
 
-    rdx_list = [x.__class__([self_rdx0.item, self_rdx1.item], party),
-                x.__class__([RingTensor.convert_to_ring(0), rdx1.item], party),
-                x.__class__([rdx0.item, RingTensor.convert_to_ring(0)], party)
+    rdx_list = [x.__class__([self_rdx0.item, self_rdx1.item]),
+                x.__class__([RingTensor.convert_to_ring(0), rdx1.item]),
+                x.__class__([rdx0.item, RingTensor.convert_to_ring(0)])
                 ]
 
     rdx_list = list_rotate(rdx_list, party.party_id)
@@ -73,7 +74,7 @@ def msb_with_os_without_mac_check(x, share_table=None):
     else:
         raise Exception("Party id error!")
     if share_table is None:
-        share_table, mac_key, smac_table = x.party.get_param(MACKey, num)
+        share_table, mac_key, smac_table = PartyRuntime.party.get_param(MACKey, num)
     else:
         share_table = share_table[0]
         smac_table = share_table[1]

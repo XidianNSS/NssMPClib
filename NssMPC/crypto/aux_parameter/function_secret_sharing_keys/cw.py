@@ -5,7 +5,7 @@
 import torch
 
 from NssMPC.common.ring.ring_tensor import RingTensor
-from NssMPC.config import BIT_LEN, data_type
+from NssMPC.config import BIT_LEN
 
 
 class CW(object):

@@ -4,6 +4,7 @@
 
 from NssMPC import RingTensor
 from NssMPC.config import data_type, RING_MAX, DEBUG_LEVEL
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.aux_parameter import Wrap
 
 
@@ -22,13 +23,13 @@ def truncate(share, scale=None):
     :rtype: ArithmeticSecretSharing
     """
     share_tensor = share.item.tensor
-    wrap_count = _wraps(share_tensor, share.party)
+    wrap_count = _wraps(share_tensor)
     share_tensor = share_tensor.div(scale, rounding_mode="trunc").to(data_type)
     share_tensor -= wrap_count * 4 * (RING_MAX // 4 // scale)
-    return share.__class__(RingTensor(share_tensor, share.dtype, share.device), share.party)
+    return share.__class__(RingTensor(share_tensor, share.dtype, share.device))
 
 
-def _wraps(share_tensor, party):
+def _wraps(share_tensor):
     """
     Privately computes the number of wraparounds for a set of shares.
 
@@ -48,13 +49,11 @@ def _wraps(share_tensor, party):
 
     :param share_tensor: The shared tensor to compute the number of wraparounds.
     :type share_tensor: torch.Tensor
-    :param party: The party that hold the tensor.
-    :type party: Party
     :returns: The number of wraps of the shares.
     :rtype: torch.Tensor
 
     """
-
+    party = PartyRuntime.party
     wrap = party.get_param(Wrap, share_tensor.numel())
     r, theta_r = wrap.r, wrap.theta_r
     if not (DEBUG_LEVEL == 2):

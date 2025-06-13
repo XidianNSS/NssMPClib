@@ -12,12 +12,12 @@ from NssMPC.config.configs import GE_TYPE
 from NssMPC.crypto.aux_parameter import BooleanTriples, DICFKey, GrottoDICFKey, SigmaDICFKey, \
     AssMulTriples, ReciprocalSqrtKey, Wrap, DivKey, B2AKey, TanhKey
 from NssMPC.crypto.aux_parameter.truncation_keys.rss_trunc_aux_param import RssTruncAuxParams
-from NssMPC.secure_model.mpc_party.party import Party, Party3PC
+from NssMPC.secure_model.mpc_party.party import PartyBase, Party3PC
 from NssMPC.secure_model.utils.param_provider import MatrixBeaverProvider
 from NssMPC.secure_model.utils.param_provider import ParamProvider
 
 
-class SemiHonestCS(Party):
+class SemiHonestCS(PartyBase):
     """
     This class supports two types: client or server. Each type of entity has its specific party_id: 1 for clients and 0 for servers.
     Also, each entity has TCP connection parameters associated with it, as well as default data types and scaling.
@@ -177,8 +177,6 @@ class SemiHonestCS(Party):
         :rtype: Any
         """
         ret = self.communicator.recv_from_address(self.receiving_address)
-        if hasattr(ret, 'party'):
-            ret.party = self
         return ret
 
     def wait(self):

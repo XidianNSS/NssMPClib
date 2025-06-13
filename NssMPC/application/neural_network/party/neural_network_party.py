@@ -6,6 +6,7 @@ import torch
 import torch.utils.data
 
 from NssMPC.application.neural_network.utils.converter import gen_mat_beaver, image2tensor
+from NssMPC.common.utils import bytes_convert
 from NssMPC.config.configs import DEBUG_LEVEL
 from NssMPC.crypto.aux_parameter import MatmulTriples
 from NssMPC.crypto.primitives.arithmetic_secret_sharing import ArithmeticSecretSharing
@@ -200,7 +201,28 @@ class HonestMajorityNeuralNetWork3PC(HonestMajorityParty):
         return num
 
     def inference(self, net, input_shares):
-        pass
+        start_send_round = self.communicator.comm_rounds['send']
+        start_recv_round = self.communicator.comm_rounds['recv']
+        start_send = self.communicator.comm_bytes['send']
+        start_recv = self.communicator.comm_bytes['recv']
+
+        output = net(input_shares)
+
+        end_send_round = self.communicator.comm_rounds['send']
+        end_recv_round = self.communicator.comm_rounds['recv']
+        end_send = self.communicator.comm_bytes['send']
+        end_recv = self.communicator.comm_bytes['recv']
+        send_round = end_send_round - start_send_round
+        recv_round = end_recv_round - start_recv_round
+        send = bytes_convert(end_send - start_send)
+        recv = bytes_convert(end_recv - start_recv)
+        print(f"Communication costs:\n\tsend rounds: {send_round}\t\t"
+              f"send bytes: {send}.")
+        print(f"\trecv rounds: {recv_round}\t\t"
+              f"recv bytes: {recv}.")
+
+        output = output.restore()
+        return output.convert_to_real_field()
 
     def wait(self):
         """

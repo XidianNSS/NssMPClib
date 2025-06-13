@@ -56,7 +56,7 @@ class SecLinear(torch.nn.Module):
         :return: The returned result ``z`` is calculated by a linear transformation.
         :rtype: ArithmeticSecretSharing
         """
-        weight = torch2share(self.weight, x.__class__, x.dtype, x.party).T
-        bias = torch2share(self.bias, x.__class__, x.dtype, x.party)
+        weight = torch2share(self.weight, x.__class__, x.dtype).T
+        bias = torch2share(self.bias, x.__class__, x.dtype)
         z = (x @ weight) + bias
         return z

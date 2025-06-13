@@ -4,6 +4,7 @@
 
 from NssMPC.common.ring import *
 from NssMPC.config.configs import SCALE
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.aux_parameter.truncation_keys.rss_trunc_aux_param import RssTruncAuxParams
 from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.base import open
 
@@ -22,11 +23,9 @@ def truncate(share, scale=SCALE):
     if scale == 1:
         return share
     tag = 'RssTruncAuxParams' if scale == SCALE else f'RssTruncAuxParams_{scale}'
-    r, r_t = share.party.get_param(tag, share.numel())
+    r, r_t = PartyRuntime.party.get_param(tag, share.numel())
     shape = share.shape
     share = share.flatten()
-    r.party = share.party
-    r_t.party = share.party
     r_t.dtype = 'float'
     r.dtype = 'float'
     delta_share = share - r

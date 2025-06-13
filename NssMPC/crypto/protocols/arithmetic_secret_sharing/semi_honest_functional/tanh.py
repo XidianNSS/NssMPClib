@@ -1,7 +1,7 @@
 #  This file is part of the NssMPClib project.
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
-
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.primitives.function_secret_sharing.dicf import SigmaDICF
 from NssMPC import RingTensor
 from NssMPC.config import SCALE_BIT, TANH_TABLE_BIT
@@ -23,14 +23,14 @@ def secure_tanh(x):
     table_scale_bit = TANH_TABLE_BIT
     shape = x.shape
     x = x.flatten()
-
-    tanh_key = x.party.get_param(TanhKey, x.numel())
+    party = PartyRuntime.party
+    tanh_key = party.get_param(TanhKey, x.numel())
     sigma_key = tanh_key.sigma_key
     select_lin_key = tanh_key.select_lin_key
 
     x_r_in = tanh_key.sigma_key.r_in
     from NssMPC import ArithmeticSecretSharing
-    x_shift = ArithmeticSecretSharing(x_r_in, x.party) + x.flatten()
+    x_shift = ArithmeticSecretSharing(x_r_in) + x.flatten()
     x_shift = x_shift.restore()
 
     y_shift = x_shift // (x.scale // (2 ** table_scale_bit))
@@ -38,17 +38,16 @@ def secure_tanh(x):
 
     d_and_w = SigmaDICF.one_key_eval(
         [y_shift, y_shift + (2 ** (table_scale_bit + 1) - 1), y_shift - (2 ** (table_scale_bit + 1))], sigma_key,
-        x.party.party_id)
+        party.party_id)
     d = d_and_w[0]
     w = d_and_w[1] ^ d_and_w[2]
 
     d_and_w_b = RingTensor.cat([d, w], dim=0)
-    d_and_w_a = b2a(d_and_w_b, x.party)
+    d_and_w_a = b2a(d_and_w_b, party)
     d = d_and_w_a[:d.numel()]
     w = d_and_w_a[d.numel():]
 
     c = SelectLin.eval_with_comm(y_shift, w, d, select_lin_key)
-    c.party = x.party
 
     abs_tanh = LookUp.eval(c, tanh_key.look_up_key, tanh_key.look_up_table)
     sign = 2 * d - 1

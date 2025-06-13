@@ -34,9 +34,9 @@ class ObliviousSelect(object):
         rdx1, k1 = key_from_previous
         rdx0, k0 = key_from_next
 
-        rdx_list = [ReplicatedSecretSharing([self_rdx1, self_rdx0], party).reshape(-1, 1),
-                    ReplicatedSecretSharing([RingTensor.convert_to_ring(0), rdx1], party).reshape(-1, 1),
-                    ReplicatedSecretSharing([rdx0, RingTensor.convert_to_ring(0)], party).reshape(-1, 1)
+        rdx_list = [ReplicatedSecretSharing([self_rdx1, self_rdx0]).reshape(-1, 1),
+                    ReplicatedSecretSharing([RingTensor.convert_to_ring(0), rdx1], ).reshape(-1, 1),
+                    ReplicatedSecretSharing([rdx0, RingTensor.convert_to_ring(0)]).reshape(-1, 1)
                     ]
 
         rdx_list = list_rotate(rdx_list, party.party_id)

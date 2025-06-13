@@ -55,6 +55,6 @@ class SecBatchNorm2d(torch.nn.Module):
         :return: Obfuscate the processed data tensor
         :rtype: torch.Tensor
         """
-        epsilon1 = torch2share(self.weight, x.__class__, x.dtype, x.party).unsqueeze(1).unsqueeze(2)
-        epsilon2 = torch2share(self.bias, x.__class__, x.dtype, x.party).unsqueeze(1).unsqueeze(2)
+        epsilon1 = torch2share(self.weight, x.__class__, x.dtype).unsqueeze(1).unsqueeze(2)
+        epsilon2 = torch2share(self.bias, x.__class__, x.dtype).unsqueeze(1).unsqueeze(2)
         return (x * epsilon1) + epsilon2

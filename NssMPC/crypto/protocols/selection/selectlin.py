@@ -26,8 +26,8 @@ class SelectLin(object):
     @staticmethod
     def eval_with_comm(x_shift, w, d, key):
         from NssMPC.crypto.primitives import ArithmeticSecretSharing
-        w_shift = ArithmeticSecretSharing(key.w, w.party) + w.flatten()
-        d_shift = ArithmeticSecretSharing(key.d, d.party) + d.flatten()
+        w_shift = ArithmeticSecretSharing(key.w) + w.flatten()
+        d_shift = ArithmeticSecretSharing(key.d) + d.flatten()
         length = w_shift.numel()
         w_and_d = ArithmeticSecretSharing.cat([w_shift, d_shift], dim=0).restore()
         w_shift = w_and_d[:length]

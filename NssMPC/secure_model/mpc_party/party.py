@@ -11,7 +11,7 @@ import time
 from multiprocessing import Pipe, Lock
 
 from NssMPC.common.random.prg import MT19937_PRG
-from NssMPC.config import DEBUG_LEVEL, BIT_LEN, SOCKET_NUM, SOCKET_TYPE
+from NssMPC.config import DEBUG_LEVEL, BIT_LEN, SOCKET_NUM, SOCKET_TYPE, DEVICE
 from NssMPC.crypto.aux_parameter import MatmulTriples, RssMatmulTriples
 from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.vsigma_key import VSigmaKey
 from NssMPC.secure_model.utils.buffer_thread.buffer_thread import BufferThread
@@ -22,7 +22,7 @@ else:
     from NssMPC.common.network.communicator import MCommunicator as Communicator
 
 
-class Party(object):
+class PartyBase(object):
     """
     A class representing a participating party. Each Party object has a unique party_id to identify it.
     """
@@ -63,8 +63,6 @@ class Party(object):
                 continue
             param_saved_name = provider.saved_name + '_' + str(self.party_id) + '.pth'
             provider.load_param(saved_name=param_saved_name)
-            if hasattr(provider.param, 'set_party'):
-                provider.param.set_party(self)
 
     def append_provider(self, provider):
         """
@@ -102,7 +100,7 @@ class Party(object):
             return self.providers[param_tag.__name__].get_parameters(*args)
 
 
-class Party3PC(Party):
+class Party3PC(PartyBase):
     """
     An implementation specifically for 3-party computation. It achieves secure computation by establishing
     communication and coordination with the other two parties.
@@ -281,7 +279,7 @@ class Party3PC(Party):
         os.kill(os.getpid(), 0)
 
 
-class VirtualParty2PC(Party):
+class VirtualParty2PC(PartyBase):
     """
     The implementation of virtual participants, which inherits from the Party class, completes relevant operations in multi-party computation through interactions with real participants.
     """
@@ -291,7 +289,7 @@ class VirtualParty2PC(Party):
         :param party_id: The unique integer ID that identifies each Party instance.
         :type party_id: int
         :param real_party: A real participant object, providing the ability to communicate with other participants.
-        :type real_party: Party
+        :type real_party: PartyBase
         """
         super().__init__(party_id)
         self.real_party = real_party
@@ -315,8 +313,6 @@ class VirtualParty2PC(Party):
             if name == 'VOSKey' or name == 'VSigmaKey':
                 param_saved_name = None
             provider.load_param(saved_name=param_saved_name)
-            if hasattr(provider.param, 'set_party'):
-                provider.param.set_party(self)
 
     def send(self, x):
         """
@@ -345,4 +341,6 @@ class VirtualParty2PC(Party):
         ret = self.real_party.receive(self.other_id)
         if hasattr(ret, 'party'):
             ret.party = self
+        if hasattr(ret, 'to'):
+            return ret.to(DEVICE)
         return ret

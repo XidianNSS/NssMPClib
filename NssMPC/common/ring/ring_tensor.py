@@ -309,7 +309,7 @@ class RingTensor(object):
         """
         if isinstance(other, RingTensor):
             assert self.dtype == other.dtype, "dtype not equal"
-            if self.device in ('cuda', 'cuda:0', 'cuda:1'):
+            if 'cuda' in self.device:
                 new_value = cuda_matmul(self.tensor, other.tensor) // self.scale
             else:
                 new_value = torch.matmul(self.tensor, other.tensor) // self.scale
@@ -734,7 +734,7 @@ class RingTensor(object):
                 + f" {x.device} and {y.device}!")
         if x.device == 'cpu':
             return cls(torch.matmul(x.tensor, y.tensor), x.dtype)
-        if x.device in ('cuda', 'cuda:0', 'cuda:1'):
+        if 'cuda' in x.device:
             return cls(cuda_matmul(x.tensor, y.tensor), x.dtype)
 
     @classmethod
@@ -986,10 +986,13 @@ class RingTensor(object):
         """
         Move the RingTensor to a specified device or convert the RingTensor to a specified type.
 
-        :param device: The specified computing device.
-        :type device: str or dtype
+        :param target: The specified computing device.
+        :type target: str or dtype
         :return: The RingTensor after the move or convert
         :rtype: RingTensor
+
+        Args:
+            target:
         """
         if target == 'int' and self.dtype == 'float':
             self.tensor = self.tensor // DTYPE_SCALE_MAPPING['float']

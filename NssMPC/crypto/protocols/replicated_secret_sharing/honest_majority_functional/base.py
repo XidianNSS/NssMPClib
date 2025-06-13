@@ -3,6 +3,7 @@
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 from NssMPC.common.ring import RingTensor
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.protocols.replicated_secret_sharing.semi_honest_functional.random import rand, rand_like
 from NssMPC.crypto.protocols.replicated_secret_sharing.semi_honest_functional.multiplication import mul_with_out_trunc
 from NssMPC.config.configs import DTYPE
@@ -18,14 +19,15 @@ def open(x):
     :rtype: RingTensor
     :raise ValueError: If the share received from the other two parties are not equal.
     """
+    party = PartyRuntime.party
     # send x0 to P_{i+1}
-    x.party.send((x.party.party_id + 1) % 3, x.item[0])
+    party.send((party.party_id + 1) % 3, x.item[0])
     # receive x2 from P_{i+1}
-    x_2_0 = x.party.receive((x.party.party_id + 2) % 3)
+    x_2_0 = party.receive((party.party_id + 2) % 3)
     # send x1 to P_{i-1}
-    x.party.send((x.party.party_id + 2) % 3, x.item[1])
+    party.send((party.party_id + 2) % 3, x.item[1])
     # receive x2 from P_{i-1}
-    x_2_1 = x.party.receive((x.party.party_id + 1) % 3)
+    x_2_1 = party.receive((party.party_id + 1) % 3)
 
     cmp = x_2_0 - x_2_1
     # print(cmp)
@@ -63,22 +65,23 @@ def recon(x, party_id):
     :return: plain text x only known to P_i
     :rtype: RingTensor
     """
+    party = PartyRuntime.party
     # P_{i+1} send x_{i+2} to P_{i}
-    if x.party.party_id == (party_id + 1) % 3:
-        x.party.send(party_id, x.item[1])
+    if party.party_id == (party_id + 1) % 3:
+        party.send(party_id, x.item[1])
     # P_{i-1} send x_{i+2} to P_{i}
-    elif x.party.party_id == (party_id + 2) % 3:
-        x.party.send(party_id, x.item[0])
+    elif party.party_id == (party_id + 2) % 3:
+        party.send(party_id, x.item[0])
 
-    elif x.party.party_id == party_id:
-        x_2_0 = x.party.receive((x.party.party_id + 2) % 3)
-        x_2_1 = x.party.receive((x.party.party_id + 1) % 3)
+    elif party.party_id == party_id:
+        x_2_0 = party.receive((party.party_id + 2) % 3)
+        x_2_1 = party.receive((party.party_id + 1) % 3)
 
         cmp = x_2_0 - x_2_1
         cmp = cmp.tensor.flatten().sum(axis=0)
         if cmp != 0:
             raise ValueError("The two parties' calculations do not agree, and there may be a malicious party involved!")
-        if x.party.party_id == party_id:
+        if party.party_id == party_id:
             return x.item[0] + x.item[1] + x_2_0
     return None
 
@@ -159,9 +162,10 @@ def mac_check(x, mx, mac_key):
     :return: The verification result. Returns 1 if successful, otherwise 0.
     :rtype: int
     """
-    r = rand_like(x, x.party)
+    party = PartyRuntime.party
+    r = rand_like(x, party)
     mr = mul_with_out_trunc(r, mac_key)
-    ro = coin(x.numel(), x.party).reshape(x.shape)
+    ro = coin(x.numel(), party).reshape(x.shape)
     v = r + x * ro
     w = mr + mx * ro
     v = open(v)
@@ -178,7 +182,7 @@ def check_zero(x):
     :rtype: int
     """
     # print("x restore", x.restore())
-    r = rand_like(x, x.party)
+    r = rand_like(x, PartyRuntime.party)
     w = mul_with_out_trunc(x, r)
     w_open = open(w)
     res = (w_open.tensor == 0) + 0

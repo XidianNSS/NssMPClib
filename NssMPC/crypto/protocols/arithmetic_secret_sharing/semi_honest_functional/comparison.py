@@ -4,6 +4,7 @@
 
 import math
 
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.aux_parameter import BooleanTriples, GrottoDICFKey, SigmaDICFKey, DICFKey
 
 from NssMPC import RingTensor
@@ -29,13 +30,13 @@ def secure_eq(x, y):
     """
     z = x - y
     shape = z.shape
-    key = x.party.get_param(GrottoDICFKey, x.numel())
-    z_shift = x.__class__(key.r_in, x.party) + z.flatten()
+    key = PartyRuntime.party.get_param(GrottoDICFKey, x.numel())
+    z_shift = x.__class__(key.r_in) + z.flatten()
     z_shift = z_shift.restore()
     z_shift.dtype = 'int'
-    ge_res = DPF.eval(z_shift.view(-1, 1), key.dpf_key, x.party.party_id).view(shape)
+    ge_res = DPF.eval(z_shift.view(-1, 1), key.dpf_key, PartyRuntime.party.party_id).view(shape)
     ge_res.dtype = x.dtype
-    return x.__class__(ge_res * x.scale, x.party)
+    return x.__class__(ge_res * x.scale)
 
 
 def secure_ge(x, y):
@@ -75,9 +76,9 @@ def msb_ge(x, y):
     shape = z.shape
     msb = get_msb(z)
     ge_res = msb
-    if x.party.party_id == 0:
+    if PartyRuntime.party.party_id == 0:
         ge_res = msb ^ 1
-    ge_res = b2a(ge_res, x.party)
+    ge_res = b2a(ge_res, PartyRuntime.party)
     ge_res = ge_res.reshape(shape)
     ge_res.dtype = x.dtype
     ge_res = ge_res * x.scale
@@ -100,13 +101,13 @@ def dicf_ge(x, y):
     """
     z = x - y
     shape = z.shape
-    key = x.party.get_param(DICFKey, x.numel())
-    z_shift = x.__class__(key.r_in, x.party) + z.flatten()
+    key = PartyRuntime.party.get_param(DICFKey, x.numel())
+    z_shift = x.__class__(key.r_in, PartyRuntime.party) + z.flatten()
     z_shift = z_shift.restore()
     z_shift.dtype = 'int'
-    ge_res = DICF.eval(z_shift, key, x.party.party_id).view(shape) * x.scale
+    ge_res = DICF.eval(z_shift, key, PartyRuntime.party.party_id).view(shape) * x.scale
     ge_res.dtype = x.dtype
-    return x.__class__(ge_res, x.party)
+    return x.__class__(ge_res, PartyRuntime.party)
 
 
 def ppq_ge(x, y):
@@ -125,12 +126,12 @@ def ppq_ge(x, y):
     """
     z = x - y
     shape = z.shape
-    key = x.party.get_param(GrottoDICFKey, x.numel())
-    z_shift = x.__class__(key.r_in, x.party) - z.flatten()
+    key = PartyRuntime.party.get_param(GrottoDICFKey, x.numel())
+    z_shift = x.__class__(key.r_in, PartyRuntime.party) - z.flatten()
     z_shift = z_shift.restore()
     z_shift.dtype = 'int'
-    ge_res = GrottoDICF.eval(z_shift, key, x.party.party_id).view(shape)
-    ge_res = b2a(ge_res, x.party)
+    ge_res = GrottoDICF.eval(z_shift, key, PartyRuntime.party.party_id).view(shape)
+    ge_res = b2a(ge_res, PartyRuntime.party)
     ge_res.dtype = x.dtype
     return ge_res * x.scale
 
@@ -151,12 +152,12 @@ def sigma_ge(x, y):
     """
     z = x - y
     shape = z.shape
-    key = x.party.get_param(SigmaDICFKey, x.numel())
-    z_shift = x.__class__(key.r_in, x.party) + z.flatten()
+    key = PartyRuntime.party.get_param(SigmaDICFKey, x.numel())
+    z_shift = x.__class__(key.r_in) + z.flatten()
     z_shift = z_shift.restore()
     z_shift.dtype = 'int'
-    ge_res = SigmaDICF.eval(z_shift, key, x.party.party_id).view(shape)
-    ge_res = b2a(ge_res, x.party)
+    ge_res = SigmaDICF.eval(z_shift, key, PartyRuntime.party.party_id).view(shape)
+    ge_res = b2a(ge_res, PartyRuntime.party)
     ge_res.dtype = x.dtype
     return ge_res * x.scale
 
@@ -203,7 +204,7 @@ def _int2bit(x, size: int):
     for i in range(0, BIT_LEN):
         arr[:, i] = ((values >> i) & 0x01).reshape(1, size)
 
-    return x.__class__(arr, x.party)
+    return x.__class__(arr, PartyRuntime.party)
 
 
 def _get_carry_bit(x, size: int) -> RingTensor:
@@ -230,7 +231,7 @@ def _get_carry_bit(x, size: int) -> RingTensor:
     g_layer0 = _get_g(x, size)
 
     # layer = 1
-    p_temp, g_temp = _get_p_and_g(p_layer0, g_layer0, x.party, BIT_LEN - 1, BIT_LEN // 2 - 1, True)
+    p_temp, g_temp = _get_p_and_g(p_layer0, g_layer0, PartyRuntime.party, BIT_LEN - 1, BIT_LEN // 2 - 1, True)
     p_layer1 = RingTensor.zeros(size=(size, BIT_LEN // 2), device=DEVICE)
     g_layer1 = RingTensor.zeros(size=(size, BIT_LEN // 2), device=DEVICE)
 
@@ -245,10 +246,11 @@ def _get_carry_bit(x, size: int) -> RingTensor:
     layer_total = int(math.log2(BIT_LEN))
 
     for i in range(1, layer_total - 1):
-        p_layer, g_layer = _get_p_and_g(p_layer, g_layer, x.party, BIT_LEN // (2 ** i), BIT_LEN // (2 ** (i + 1)),
+        p_layer, g_layer = _get_p_and_g(p_layer, g_layer, PartyRuntime.party, BIT_LEN // (2 ** i),
+                                        BIT_LEN // (2 ** (i + 1)),
                                         False)
 
-    carry_bit = _get_g_last_layer(p_layer, g_layer, x.party, 2, 1)
+    carry_bit = _get_g_last_layer(p_layer, g_layer, PartyRuntime.party, 2, 1)
     carry_bit = carry_bit.reshape(carry_bit.size()[0])
 
     return carry_bit
@@ -266,22 +268,22 @@ def _get_g(x, size: int) -> RingTensor:
     :rtype: RingTensor
     """
 
-    a, b, c = x.party.get_param(BooleanTriples, BIT_LEN)
+    a, b, c = PartyRuntime.party.get_param(BooleanTriples, BIT_LEN)
     a = a.to(DEVICE)
     b = b.to(DEVICE)
     c = c.to(DEVICE)
 
     x_prime = RingTensor.zeros(size=(size, BIT_LEN), device=DEVICE)
 
-    if x.party.party_id == 0:
+    if PartyRuntime.party.party_id == 0:
         e = x.item ^ a
         f = x_prime ^ b
     else:
         e = x_prime ^ a
         f = x.item ^ b
 
-    x.party.send(RingTensor.cat((e, f), dim=0))
-    get_array = x.party.receive()
+    PartyRuntime.party.send(RingTensor.cat((e, f), dim=0))
+    get_array = PartyRuntime.party.receive()
 
     length = int(get_array.shape[0] / 2)
 
@@ -291,7 +293,7 @@ def _get_g(x, size: int) -> RingTensor:
     common_e = e ^ e_i
     common_f = f ^ f_i
 
-    return (RingTensor(x.party.party_id, dtype=x.dtype).to(DEVICE) & common_f & common_e) \
+    return (RingTensor(PartyRuntime.party.party_id, dtype=x.dtype).to(DEVICE) & common_f & common_e) \
         ^ (common_e & b) ^ (common_f & a) ^ c
 
 

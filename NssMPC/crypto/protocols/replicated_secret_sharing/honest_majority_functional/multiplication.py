@@ -1,7 +1,7 @@
 #  This file is part of the NssMPClib project.
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
-
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.aux_parameter import RssMulTriples, RssMatmulTriples
 from NssMPC.crypto.protocols.replicated_secret_sharing.semi_honest_functional import mul_with_out_trunc, \
     matmul_with_out_trunc
@@ -23,7 +23,8 @@ def v_mul(x, y):
     ori_type = x.dtype
     res = mul_with_out_trunc(x, y)
 
-    a, b, c = x.party.get_param(RssMulTriples, res.numel())  # TODO: need fix, get triples based on x.shape and y.shape
+    a, b, c = PartyRuntime.party.get_param(RssMulTriples,
+                                           res.numel())  # TODO: need fix, get triples based on x.shape and y.shape
     x_hat = x.clone()
     y_hat = y.clone()
 
@@ -57,10 +58,7 @@ def v_matmul(x, y):
     :rtype: ReplicatedSecretSharing
 
     """
-    a, b, c = x.party.get_param(RssMatmulTriples, x.shape, y.shape)
-    a.party = x.party
-    b.party = x.party
-    c.party = x.party
+    a, b, c = PartyRuntime.party.get_param(RssMatmulTriples, x.shape, y.shape)
 
     ori_type = x.dtype
     res = matmul_with_out_trunc(x, y)
@@ -78,8 +76,8 @@ def v_matmul(x, y):
     f = common_e_f[x.numel():].reshape(y.shape)
 
     from NssMPC.crypto.primitives.arithmetic_secret_sharing import ReplicatedSecretSharing
-    mat_1 = ReplicatedSecretSharing([e @ b.item[0], e @ b.item[1]], x.party)
-    mat_2 = ReplicatedSecretSharing([a.item[0] @ f, a.item[1] @ f], x.party)
+    mat_1 = ReplicatedSecretSharing([e @ b.item[0], e @ b.item[1]])
+    mat_2 = ReplicatedSecretSharing([a.item[0] @ f, a.item[1] @ f])
 
     check = -c + mat_1 + mat_2 - e @ f
     check_zero(res + check)

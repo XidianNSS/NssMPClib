@@ -105,7 +105,7 @@ class SecConv2d(torch.nn.Module):
         :return: The output tensor after the convolution operation.
         :rtype: RingTensor
         """
-        weight = torch2share(self.weight, x.__class__, x.dtype, x.party)
+        weight = torch2share(self.weight, x.__class__, x.dtype)
 
         self.kernel_shape = weight.shape
         self.out_shape = self.get_out_shape(x)
@@ -127,7 +127,7 @@ class SecConv2d(torch.nn.Module):
         if bias is None:
             pass
         else:
-            bias = torch2share(self.bias, x.__class__, x.dtype, x.party)
+            bias = torch2share(self.bias, x.__class__, x.dtype)
             output = output + bias
 
         return output.transpose(1, 2).reshape(self.out_shape)

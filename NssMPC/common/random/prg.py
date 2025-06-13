@@ -197,5 +197,7 @@ class MT19937_PRG():
         :rtype: RingTensor
         """
         return RingTensor(
-            torch.empty(length, dtype=self.dtype, device=self.device).random_(torch.iinfo(self.dtype).min, to=None,
-                                                                              generator=self.generator), dtype)
+            torch.empty(length, dtype=self.dtype, device=self.generator.device).random_(torch.iinfo(self.dtype).min,
+                                                                                        to=None,
+                                                                                        generator=self.generator),
+            dtype)

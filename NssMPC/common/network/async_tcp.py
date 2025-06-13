@@ -89,8 +89,8 @@ class TCPServer(object):
         .. note::
             "Q" represents an unsigned 8-byte integer, Therefore, struct.calcsize("Q") will return 8
 
-        :param target_address: A tuple containing the address and port for the target.
-        :type target_address: tuple
+        :param target_address: A str containing the address and port for the target.
+        :type target_address: str
         :return: The resulting object `frame` deserialized.
         :rtype: serialized data objects
         """

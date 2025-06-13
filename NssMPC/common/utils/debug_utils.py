@@ -18,11 +18,7 @@ END = '\033[0m'
 def debug_print(*args, sep=' ', end='\n', file=None, color=GREEN):
     """
     Print debugging information with specified color.
-
     The input parameters, except `color`, have the same purpose and type as the ``print`` function.
-
-    :param color: The color to print the content.
-    :type color: str
     """
     print(f"{color}{str(*args)}{END}", sep=sep, end=end, file=file)
 

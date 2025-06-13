@@ -93,9 +93,9 @@ class MatrixBeaverProvider(FixedShapeProvider):
 
                 from NssMPC.crypto.primitives.arithmetic_secret_sharing import \
                     ArithmeticSecretSharing
-                a = ArithmeticSecretSharing(a_tensor, self.party)
-                b = ArithmeticSecretSharing(b_tensor, self.party)
-                c = ArithmeticSecretSharing(c_tensor, self.party)
+                a = ArithmeticSecretSharing(a_tensor)
+                b = ArithmeticSecretSharing(b_tensor)
+                c = ArithmeticSecretSharing(c_tensor)
 
                 self.param[f"{list(x_shape)}_{list(y_shape)}"] = MatmulTriples()
                 self.param[f"{list(x_shape)}_{list(y_shape)}"].set_triples(a, b, c)
@@ -179,9 +179,9 @@ class RssMatrixBeaverProvider(FixedShapeProvider):
 
                 from NssMPC.crypto.primitives.arithmetic_secret_sharing import \
                     ReplicatedSecretSharing
-                a = ReplicatedSecretSharing([a_tensor, a_tensor], self.party)
-                b = ReplicatedSecretSharing([b_tensor, b_tensor], self.party)
-                c = ReplicatedSecretSharing([c_tensor, c_tensor], self.party)
+                a = ReplicatedSecretSharing([a_tensor, a_tensor])
+                b = ReplicatedSecretSharing([b_tensor, b_tensor])
+                c = ReplicatedSecretSharing([c_tensor, c_tensor])
 
                 self.param[f"{list(x_shape)}_{list(y_shape)}"] = RssMatmulTriples()
                 self.param[f"{list(x_shape)}_{list(y_shape)}"].set_triples(a, b, c)

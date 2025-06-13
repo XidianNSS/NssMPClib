@@ -67,8 +67,8 @@ class SecLayerNorm(torch.nn.Module):
         z = x - mean
         inv_sqrt_variance = x.__class__.rsqrt(((z * z).sum(dim=-1).unsqueeze(-1)) / self.normalized_shape)
 
-        weight = torch2share(self.weight, x.__class__, x.dtype, x.party)
-        bias = torch2share(self.bias, x.__class__, x.dtype, x.party)
+        weight = torch2share(self.weight, x.__class__, x.dtype)
+        bias = torch2share(self.bias, x.__class__, x.dtype)
 
         z = z * inv_sqrt_variance * weight + bias
 

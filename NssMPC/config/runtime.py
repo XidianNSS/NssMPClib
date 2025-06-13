@@ -2,6 +2,62 @@
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
+class Runtime:
+    """
+    A class to manage the runtime environment of the NssMPClib library.
+    Only supports `with runtime(party):` syntax.
+    """
+    _current_party = None
+    _party_stack = []
+
+    def __call__(self, party):
+        """
+        Set the current party for the runtime context.
+        This method allows the runtime to be called with a specific party, which will be used in the context manager.
+        :param party: The party to set as the current runtime context.
+        :type party: Party
+        :return: The current instance of the Runtime class.
+        """
+        if self._current_party is not None:
+            self._party_stack.append(self._current_party)
+        self._current_party = party
+        return self
+
+    def __enter__(self):
+        """
+        Enter the runtime context.
+        This method is called when entering the `with` statement. It ensures that a party has been set before entering the context.
+        """
+        if self._current_party is None:
+            raise RuntimeError("Runtime must be called with a party before entering the context.")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Exit the runtime context, restoring the previous party.
+        This method is called when exiting the `with` statement. It restores the previous party from the stack if available.
+        """
+        if self._party_stack:
+            self._current_party = self._party_stack.pop()
+        else:
+            self._current_party = None
+
+    @property
+    def party(self):
+        """
+        Get the current party in the runtime context.
+        This property returns the current party that has been set in the runtime context.
+        :return: The current party.
+        :rtype: Party
+        """
+        if self._current_party is None:
+            raise RuntimeError("No party is currently set in the runtime context.")
+        return self._current_party
+
+
+PartyRuntime = Runtime()
+
+
 class MacBuffer:
     """
     Manage the operation of secret shared values and validate them with message verification codes
@@ -24,11 +80,11 @@ class MacBuffer:
         Adds new data, MAC, and keys to the MacBuffer.
 
         :param x: data item
-        :type x: Any
+        :type x: ReplicatedSecretSharing
         :param mac: message authentication code
-        :type mac: str
+        :type mac: ReplicatedSecretSharing
         :param key: secret key
-        :type key: str
+        :type key: ReplicatedSecretSharing
         """
         self.x.append(x.clone())
         self.mac.append(mac.clone())

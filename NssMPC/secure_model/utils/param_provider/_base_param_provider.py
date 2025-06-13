@@ -27,7 +27,7 @@ class BaseParamProvider(object):
             * **lock** (*Lock*): Ensure thread safety.
             * **ptr** (*int*): Points to the current parameter position.
             * **buffer_ptr** (*int*): Point to the location of the pointed buffer.
-            * **infile_ptr** (*int*): Point to the location of the input file..
+            * **infile_ptr** (*int*): Point to the location of the input file.
             * **file_ptr** (*int*): Point to the current file location.
             * **left_ptr** (*itn*): Point to the remaining parameter positions.
             * **have_params** (*bool*): Whether there are still available parameters

@@ -5,6 +5,7 @@ client
 import unittest
 
 from NssMPC.config.configs import DEBUG_LEVEL
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.aux_parameter.beaver_triples import MatmulTriples
 from NssMPC.crypto.primitives import ArithmeticSecretSharing
 from NssMPC.secure_model.mpc_party import SemiHonestCS
@@ -22,6 +23,7 @@ y_1 = client.receive()
 
 share_y = y_1
 
+PartyRuntime(client)
 
 class TestClient(unittest.TestCase):
     @classmethod
@@ -30,7 +32,7 @@ class TestClient(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        pass  # client.close()
+        client.close()
 
     # restoring of x and y
     def test_restoring(self):

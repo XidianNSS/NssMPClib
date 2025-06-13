@@ -5,6 +5,7 @@
 import torch
 
 from NssMPC.config import SCALE_BIT, GELU_TABLE_BIT
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.aux_parameter.look_up_table_keys.gelu_key import GeLUKey
 from NssMPC.crypto.protocols.arithmetic_secret_sharing.semi_honest_functional import b2a
 
@@ -42,7 +43,7 @@ def _gelu_forward_cpu(x):
     table_scale_bit = GELU_TABLE_BIT
     table_size = 2 ** (table_scale_bit + 2)
     y = x / (x.scale // (2 ** table_scale_bit))
-    key = x.party.get_param(GeLUKey, x.numel())
+    key = PartyRuntime.party.get_param(GeLUKey, x.numel())
 
     d = y >= 0
     p = d * y
@@ -85,7 +86,7 @@ def _gelu_select_eval(x_shift: RingTensor, s_shift, key, r_in_1, r_in_2, party):
     shape = x_shift.shape
     x_shift = x_shift.flatten()
     return ArithmeticSecretSharing(RingTensor.where(s_shift, (party.party_id - r_in_1) * x_shift - r_in_2 + key.w
-                                                    , r_in_1 * x_shift + key.w - key.z).reshape(shape), party)
+                                                    , r_in_1 * x_shift + key.w - key.z).reshape(shape))
 
 
 def _gelu_forward_gpu(x):
@@ -107,13 +108,13 @@ def _gelu_forward_gpu(x):
     shape = x.shape
     x = x.flatten()
 
-    gelu_key = x.party.get_param(GeLUKey, x.numel())
+    gelu_key = PartyRuntime.party.get_param(GeLUKey, x.numel())
     sigma_key = gelu_key.sigma_key
     select_lin_key = gelu_key.select_lin_key
     select_key = gelu_key.select_key
 
     x_r_in = gelu_key.sigma_key.r_in
-    x_shift = ArithmeticSecretSharing(x_r_in, x.party) + x.flatten()
+    x_shift = ArithmeticSecretSharing(x_r_in) + x.flatten()
     x_shift = x_shift.restore()
 
     y_shift = x_shift // (x.scale // (2 ** table_scale_bit))
@@ -121,17 +122,17 @@ def _gelu_forward_gpu(x):
 
     d_and_w = SigmaDICF.one_key_eval(
         [y_shift, y_shift + (2 ** (table_scale_bit + 2) - 1), y_shift - (2 ** (table_scale_bit + 2))], sigma_key,
-        x.party.party_id)
+        PartyRuntime.party.party_id)
     d = d_and_w[0]
     w = d_and_w[1] ^ d_and_w[2]
 
     d_and_w_b = RingTensor.cat([d, w], dim=0)
-    d_and_w_a = b2a(d_and_w_b, x.party)
+    d_and_w_a = b2a(d_and_w_b, PartyRuntime.party)
     d = d_and_w_a[:d.numel()]
     w = d_and_w_a[d.numel():]
 
-    w_shift = ArithmeticSecretSharing(select_lin_key.w, w.party) + w.flatten()
-    d_shift = ArithmeticSecretSharing(select_lin_key.d, d.party) + d.flatten()
+    w_shift = ArithmeticSecretSharing(select_lin_key.w) + w.flatten()
+    d_shift = ArithmeticSecretSharing(select_lin_key.d) + d.flatten()
 
     length = w_shift.numel()
     w_and_d = ArithmeticSecretSharing.cat([w_shift, d_shift], dim=0).restore()
@@ -139,11 +140,10 @@ def _gelu_forward_gpu(x):
     d_shift = w_and_d[length:]
 
     c = SelectLin.eval(y_shift, w_shift, d_shift, select_lin_key)
-    c.party = x.party
 
     s_shift = d_shift % 2
     s_shift.bit_len = d_shift.bit_len
-    relu_x = _gelu_select_eval(x_shift, s_shift, select_key, select_lin_key.d, x_r_in, x.party)
+    relu_x = _gelu_select_eval(x_shift, s_shift, select_key, select_lin_key.d, x_r_in, PartyRuntime.party)
     relu_x.dtype = x.dtype
 
     return (relu_x - LookUp.eval(c, gelu_key.look_up_key, gelu_key.look_up_table)).reshape(shape)

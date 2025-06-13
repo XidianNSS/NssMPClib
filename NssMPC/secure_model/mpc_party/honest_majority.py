@@ -45,13 +45,9 @@ class HonestMajorityParty(Party3PC):
                 continue
             if provider.param_type == VOSKey or provider.param_type == VSigmaKey:
                 provider.load_param()
-                if hasattr(provider.param, 'set_party'):
-                    provider.param.set_party(self)
                 continue
             param_saved_name = provider.saved_name + '_' + str(self.party_id) + '.pth'
             provider.load_param(saved_name=param_saved_name)
-            if hasattr(provider.param, 'set_party'):
-                provider.param.set_party(self)
         self.virtual_party_with_previous.load_aux_params()
         self.virtual_party_with_next.load_aux_params()
 

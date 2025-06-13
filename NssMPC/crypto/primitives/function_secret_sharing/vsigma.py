@@ -60,9 +60,9 @@ class VSigma(object):
     def cmp_eval(x, keys, party_id):
         from NssMPC import ArithmeticSecretSharing
         if DEBUG_LEVEL == 2:
-            x_shift = ArithmeticSecretSharing(keys.r_in, x.party) + x
+            x_shift = ArithmeticSecretSharing(keys.r_in) + x
         else:
-            x_shift = ArithmeticSecretSharing(keys.r_in.reshape(x.shape), x.party) + x
+            x_shift = ArithmeticSecretSharing(keys.r_in.reshape(x.shape)) + x
         x_shift = x_shift.restore()
         return verifiable_sigma_eval(party_id, keys, x_shift)
 

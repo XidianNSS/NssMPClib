@@ -8,7 +8,8 @@ Replicated Secret Sharing
 import torch
 
 from NssMPC.common.ring import *
-from NssMPC.crypto.primitives.arithmetic_secret_sharing._arithmetic_base import ArithmeticBase, RingPair
+from NssMPC.config.runtime import PartyRuntime
+from NssMPC.crypto.primitives.arithmetic_secret_sharing._arithmetic_base import SecretSharingBase, RingPair
 from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional import v_mul, v_matmul, truncate
 from NssMPC.crypto.protocols.replicated_secret_sharing.honest_majority_functional.compare import \
     secure_ge as v_secure_ge
@@ -17,7 +18,7 @@ from NssMPC.crypto.protocols.replicated_secret_sharing.semi_honest_functional im
 from NssMPC.secure_model.mpc_party import HonestMajorityParty
 
 
-class ReplicatedSecretSharing(ArithmeticBase):
+class ReplicatedSecretSharing(SecretSharingBase):
     """
     A class for replicated secret sharing over a RingPair.
 
@@ -27,31 +28,22 @@ class ReplicatedSecretSharing(ArithmeticBase):
 
     :param ring_pair: The RingTensor pair(RingPair) used for secret sharing.
     :type ring_pair: RingPair(RingPair)
-    :param party: The party that holds the RingPair.
-    :type party: Party
 
     .. note::
         The name of this class is abbreviated as **RSS** below.
 
     """
 
-    def __init__(self, ring_pair, party=None):
+    def __init__(self, ring_pair):
         """
         Initializes an ReplicatedSecretSharing object.
 
         :param ring_pair: The RingTensor pair used for secret sharing.
         :type ring_pair: RingPair or list[RingTensor]
-        :param party: The party that holds the shared tensor. Defaults to None.
-        :type party: Party
         """
         if isinstance(ring_pair, list):
             ring_pair = RingPair(ring_pair[0], ring_pair[1])
-        super(ReplicatedSecretSharing, self).__init__(ring_pair, party)
-
-    @property
-    def T(self):
-        """Returns an RSS instance with the dimensions of its ring_pair reversed."""
-        return self.__class__(self.item.T, self.party)
+        super(ReplicatedSecretSharing, self).__init__(ring_pair)
 
     def __getitem__(self, item):
         """
@@ -64,7 +56,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
         :rtype: ReplicatedSecretSharing
 
         """
-        return ReplicatedSecretSharing([self.item[0][item], self.item[1][item]], self.party)
+        return ReplicatedSecretSharing([self.item[0][item], self.item[1][item]])
 
     def __setitem__(self, key, value):
         """
@@ -104,22 +96,23 @@ class ReplicatedSecretSharing(ArithmeticBase):
         :rtype: ReplicatedSecretSharing
         :raises TypeError: If `other` is not of a supported type.
         """
+        party = PartyRuntime.party
         if isinstance(other, ReplicatedSecretSharing):
-            return self.__class__(RingPair(self.item[0] + other.item[0], self.item[1] + other.item[1]), self.party)
+            return self.__class__(RingPair(self.item[0] + other.item[0], self.item[1] + other.item[1]))
         elif isinstance(other, RingTensor):
             zeros = RingTensor.zeros_like(other, dtype=other.dtype, device=other.device)
-            if self.party.party_id == 0:
-                return self.__class__(RingPair(self.item[0] + other, self.item[1] + zeros), self.party)
-            elif self.party.party_id == 2:
-                return self.__class__(RingPair(self.item[0] + zeros, self.item[1] + other), self.party)
+            if party.party_id == 0:
+                return self.__class__(RingPair(self.item[0] + other, self.item[1] + zeros))
+            elif party.party_id == 2:
+                return self.__class__(RingPair(self.item[0] + zeros, self.item[1] + other))
             else:
-                return self.__class__(RingPair(self.item[0] + zeros, self.item[1] + zeros), self.party)
+                return self.__class__(RingPair(self.item[0] + zeros, self.item[1] + zeros))
         elif isinstance(other, (int, float)):
             other = RingTensor.convert_to_ring(int(other * self.scale))
-            if self.party.party_id == 0:
-                return self.__class__(RingPair(self.item[0] + other, self.item[1]), self.party)
-            elif self.party.party_id == 2:
-                return self.__class__(RingPair(self.item[0], self.item[1] + other), self.party)
+            if party.party_id == 0:
+                return self.__class__(RingPair(self.item[0] + other, self.item[1]))
+            elif party.party_id == 2:
+                return self.__class__(RingPair(self.item[0], self.item[1] + other))
             else:
                 return self.clone()
         else:
@@ -137,22 +130,23 @@ class ReplicatedSecretSharing(ArithmeticBase):
         :rtype: ReplicatedSecretSharing
         :raises TypeError: If `other` is not of a supported type.
         """
+        party = PartyRuntime.party
         if isinstance(other, ReplicatedSecretSharing):
-            return self.__class__(RingPair(self.item[0] - other.item[0], self.item[1] - other.item[1]), self.party)
+            return self.__class__(RingPair(self.item[0] - other.item[0], self.item[1] - other.item[1]))
         elif isinstance(other, RingTensor):
             zeros = RingTensor.zeros_like(other, dtype=other.dtype, device=other.device)
-            if self.party.party_id == 0:
-                return self.__class__(RingPair(self.item[0] - other, self.item[1] - zeros), self.party)
-            elif self.party.party_id == 2:
-                return self.__class__(RingPair(self.item[0] - zeros, self.item[1] - other), self.party)
+            if party.party_id == 0:
+                return self.__class__(RingPair(self.item[0] - other, self.item[1] - zeros))
+            elif party.party_id == 2:
+                return self.__class__(RingPair(self.item[0] - zeros, self.item[1] - other))
             else:
-                return self.__class__(RingPair(self.item[0] - zeros, self.item[1] - zeros), self.party)
+                return self.__class__(RingPair(self.item[0] - zeros, self.item[1] - zeros))
         elif isinstance(other, int):
             other = RingTensor.convert_to_ring(int(other * self.scale))
-            if self.party.party_id == 0:
-                return self.__class__(RingPair(self.item[0] - other, self.item[1]), self.party)
-            elif self.party.party_id == 2:
-                return self.__class__(RingPair(self.item[0], self.item[1] - other), self.party)
+            if party.party_id == 0:
+                return self.__class__(RingPair(self.item[0] - other, self.item[1]))
+            elif party.party_id == 2:
+                return self.__class__(RingPair(self.item[0], self.item[1] - other))
             else:
                 return self.clone()
         else:
@@ -177,7 +171,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
             Type 'float' is not supported.
         """
         if isinstance(other, ReplicatedSecretSharing):
-            if isinstance(self.party, HonestMajorityParty):
+            if isinstance(PartyRuntime.party, HonestMajorityParty):
                 return v_mul(self, other)
             else:
                 result = mul_with_out_trunc(self, other)
@@ -187,13 +181,13 @@ class ReplicatedSecretSharing(ArithmeticBase):
         elif isinstance(other, RingTensor):
             result0 = RingTensor.mul(self.item[0], other)
             result1 = RingTensor.mul(self.item[1], other)
-            result = ReplicatedSecretSharing(RingPair(result0, result1), self.party)
+            result = ReplicatedSecretSharing(RingPair(result0, result1))
             if self.dtype == "float":
                 result = truncate(result)
             return result
         elif isinstance(other, int):
             result = self.item * other
-            return ReplicatedSecretSharing(result, self.party)
+            return ReplicatedSecretSharing(result)
         else:
             raise TypeError("unsupported operand type(s) for * 'ReplicatedSecretSharing' and ", type(other))
 
@@ -216,7 +210,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
             The input parameter type must be RSS or RingTensor.
         """
         if isinstance(other, ReplicatedSecretSharing):
-            if isinstance(self.party, HonestMajorityParty):
+            if isinstance(PartyRuntime.party, HonestMajorityParty):
                 torch.cuda.empty_cache()
                 return v_matmul(self, other)
             else:
@@ -233,7 +227,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
         elif isinstance(other, RingTensor):
             result0 = RingTensor.matmul(self.item[0], other)
             result1 = RingTensor.matmul(self.item[1], other)
-            result = ReplicatedSecretSharing(RingPair(result0, result1), self.party)
+            result = ReplicatedSecretSharing(RingPair(result0, result1))
             if self.dtype == "float":
                 result = truncate(result)
             torch.cuda.empty_cache()
@@ -243,7 +237,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
 
     def __rmatmul__(self, other):
         if isinstance(other, ReplicatedSecretSharing):
-            if isinstance(self.party, HonestMajorityParty):
+            if isinstance(PartyRuntime.party, HonestMajorityParty):
                 torch.cuda.empty_cache()
                 return v_matmul(other, self)
             else:
@@ -260,7 +254,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
         elif isinstance(other, RingTensor):
             result0 = RingTensor.matmul(other, self.item[0])
             result1 = RingTensor.matmul(other, self.item[1])
-            result = ReplicatedSecretSharing(RingPair(result0, result1), self.party)
+            result = ReplicatedSecretSharing(RingPair(result0, result1))
             if self.dtype == "float":
                 result = truncate(result)
             torch.cuda.empty_cache()
@@ -281,7 +275,8 @@ class ReplicatedSecretSharing(ArithmeticBase):
         :rtype: ReplicatedSecretSharing
         :raises TypeError: If `other` is not of a supported type.
         """
-        if isinstance(self.party, HonestMajorityParty):
+        party = PartyRuntime.party
+        if isinstance(party, HonestMajorityParty):
             ge = v_secure_ge
         else:
             ge = secure_ge
@@ -289,12 +284,12 @@ class ReplicatedSecretSharing(ArithmeticBase):
             return ge(self, other)
         elif isinstance(other, RingTensor):
             zeros = RingTensor.zeros_like(other, dtype=other.dtype, device=other.device)
-            if self.party.party_id == 0:
-                other = ReplicatedSecretSharing([other, zeros], self.party)
-            elif self.party.party_id == 1:
-                other = ReplicatedSecretSharing([zeros, zeros], self.party)
-            elif self.party.party_id == 2:
-                other = ReplicatedSecretSharing([zeros, other], self.party)
+            if party.party_id == 0:
+                other = ReplicatedSecretSharing([other, zeros])
+            elif party.party_id == 1:
+                other = ReplicatedSecretSharing([zeros, zeros])
+            elif party.party_id == 2:
+                other = ReplicatedSecretSharing([zeros, other])
             return ge(self, other)
         elif isinstance(other, int):
             return self >= RingTensor.convert_to_ring(int(other * self.scale))
@@ -362,7 +357,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
         """
         result_0 = RingTensor.cat([e.item[0] for e in tensor_list], dim)
         result_1 = RingTensor.cat([e.item[1] for e in tensor_list], dim)
-        return cls(RingPair(result_0, result_1), tensor_list[0].party)
+        return cls(RingPair(result_0, result_1))
 
     @classmethod
     def stack(cls, tensor_list, dim=0):
@@ -381,7 +376,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
         """
         result_0 = RingTensor.stack([e.item[0] for e in tensor_list], dim)
         result_1 = RingTensor.stack([e.item[1] for e in tensor_list], dim)
-        return cls(RingPair(result_0, result_1), tensor_list[0].party)
+        return cls(RingPair(result_0, result_1))
 
     @classmethod
     def roll(cls, input, shifts, dims=0):
@@ -402,7 +397,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
         """
         result_0 = RingTensor.roll(input.item[0], shifts, dims)
         result_1 = RingTensor.roll(input.item[1], shifts, dims)
-        return cls(RingPair(result_0, result_1), input.party)
+        return cls(RingPair(result_0, result_1))
 
     @classmethod
     def rotate(cls, input, shifts):
@@ -421,7 +416,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
         """
         result_0 = RingTensor.rotate(input.item[0], shifts)
         result_1 = RingTensor.rotate(input.item[1], shifts)
-        return cls(RingPair(result_0, result_1), input.party)
+        return cls(RingPair(result_0, result_1))
 
     @staticmethod
     def gen_and_share(r_tensor, party):
@@ -441,9 +436,6 @@ class ReplicatedSecretSharing(ArithmeticBase):
 
         """
         r0, r1, r2 = ReplicatedSecretSharing.share(r_tensor)
-        r0.party = party
-        r1.party = party
-        r2.party = party
         party.send((party.party_id + 1) % 3, r1)
         party.send((party.party_id + 2) % 3, r2)
         return r0
@@ -477,9 +469,10 @@ class ReplicatedSecretSharing(ArithmeticBase):
         :rtype: RingTensor
         """
         # 发送部分
-        self.party.send((self.party.party_id + 1) % 3, self.item[0])
+        party = PartyRuntime.party
+        party.send((party.party_id + 1) % 3, self.item[0])
         # 接收部分
-        other = self.party.receive((self.party.party_id + 2) % 3)
+        other = party.receive((party.party_id + 2) % 3)
         return self.item[0] + self.item[1] + other
 
     @staticmethod
@@ -505,7 +498,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
         value = value.tensor + r_0 - r_1
         party.send((party.party_id + 2) % 3, value)
         other = party.receive((party.party_id + 1) % 3)
-        return ReplicatedSecretSharing(RingPair(value, other), party)
+        return ReplicatedSecretSharing(RingPair(value, other))
 
     @classmethod
     def random(cls, shape, party):
@@ -526,7 +519,7 @@ class ReplicatedSecretSharing(ArithmeticBase):
             num_of_value *= d
         r_0 = party.prg_0.random(num_of_value)
         r_1 = party.prg_1.random(num_of_value)
-        r = ReplicatedSecretSharing([r_0, r_1], party)
+        r = ReplicatedSecretSharing([r_0, r_1])
         r = r.reshape(shape)
         return r
 

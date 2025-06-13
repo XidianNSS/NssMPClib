@@ -8,6 +8,8 @@ Support matrix beaver for convolutional, linear layers and average pooling layer
 
 import warnings
 import torch
+
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.aux_parameter import MatmulTriples, RssMatmulTriples
 from NssMPC.secure_model.mpc_party import SemiHonestCS, HonestMajorityParty
 
@@ -39,9 +41,9 @@ def beaver_for_conv(x, kernel, padding, stride, num_of_triples):
     im2col_output_shape = torch.zeros([n, h_out * w_out, c * k * k]).shape
     reshaped_kernel_size = torch.zeros([1, c * k * k, f]).shape
     shapes = im2col_output_shape, reshaped_kernel_size
-    if isinstance(x.party, SemiHonestCS):
+    if isinstance(PartyRuntime.party, SemiHonestCS):
         return MatmulTriples.gen(num_of_triples, shapes[0], shapes[1])
-    elif isinstance(x.party, HonestMajorityParty):
+    elif isinstance(PartyRuntime.party, HonestMajorityParty):
         return RssMatmulTriples.gen(num_of_triples, shapes[0], shapes[1])
     else:
         warnings.warn("Maybe this party do not need to generate beaver triples.")
@@ -60,15 +62,15 @@ def beaver_for_linear(x, weight, num_of_triples):
     :param x: The input tensor
     :type x: torch.Tensor
     :param weight: Multiply each element of an image
-    :type weight: int
+    :type weight: torch.Tensor
     :param num_of_triples: the number of triples
     :type num_of_triples: int
     """
 
     weight = weight.T
-    if isinstance(x.party, SemiHonestCS):
+    if isinstance(PartyRuntime.party, SemiHonestCS):
         return MatmulTriples.gen(num_of_triples, x.shape, weight.shape)
-    elif isinstance(x.party, HonestMajorityParty):
+    elif isinstance(PartyRuntime.party, HonestMajorityParty):
         return RssMatmulTriples.gen(num_of_triples, x.shape, weight.shape)
     else:
         warnings.warn("Maybe this party do not need to generate beaver triples.")
@@ -94,9 +96,9 @@ def beaver_for_avg_pooling(x, kernel_shape, padding, stride, num_of_triples):
     h_out = (h + 2 * padding - kernel_shape) // stride + 1
     w_out = (w + 2 * padding - kernel_shape) // stride + 1
     shapes = torch.zeros([n, c, h_out * w_out, kernel_shape * kernel_shape]).shape
-    if isinstance(x.party, SemiHonestCS):
+    if isinstance(PartyRuntime.party, SemiHonestCS):
         return MatmulTriples.gen(num_of_triples, shapes, torch.zeros([shapes[3], 1]).shape)
-    elif isinstance(x.party, HonestMajorityParty):
+    elif isinstance(PartyRuntime.party, HonestMajorityParty):
         return RssMatmulTriples.gen(num_of_triples, shapes, torch.zeros([shapes[3], 1]).shape)
     else:
         warnings.warn("Maybe this party do not need to generate beaver triples.")
@@ -114,7 +116,7 @@ def beaver_for_adaptive_avg_pooling(x, output_shape, num_of_triples):
     :param x: The input tensor
     :type x: torch.Tensor
     :param output_shape: the shape of the output tensor
-    :type output_shape: torch.Tensor
+    :type output_shape: tuple
     :param num_of_triples: the number of triples
     :type num_of_triples: int
     """

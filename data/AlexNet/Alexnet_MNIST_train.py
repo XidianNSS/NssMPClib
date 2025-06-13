@@ -24,13 +24,13 @@ transform1 = transforms.Compose([
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-trainset = torchvision.datasets.MNIST(root=NN_path, train=True, download=True,
+trainset = torchvision.datasets.CIFAR10(root=NN_path, train=True, download=True,
                                       transform=transform)
 
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=100, shuffle=True,
                                           num_workers=0)
 
-testset = torchvision.datasets.MNIST(root=NN_path,
+testset = torchvision.datasets.CIFAR10(root=NN_path,
                                      train=False, download=True,
                                      transform=transform1)
 testloader = torch.utils.data.DataLoader(testset, batch_size=1000, shuffle=False, num_workers=0)

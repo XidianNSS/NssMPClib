@@ -5,12 +5,13 @@
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 from NssMPC.common.ring import *
-from NssMPC.crypto.primitives.arithmetic_secret_sharing._arithmetic_base import ArithmeticBase
+from NssMPC.config.runtime import PartyRuntime
+from NssMPC.crypto.primitives.arithmetic_secret_sharing._arithmetic_base import SecretSharingBase, auto_delegate
 from NssMPC.crypto.protocols.arithmetic_secret_sharing.semi_honest_functional import beaver_mul, secure_matmul, \
     secure_div, secure_eq, secure_ge, secure_exp, secure_reciprocal_sqrt, truncate, secure_tanh
 
 
-class ArithmeticSecretSharing(ArithmeticBase):
+class ArithmeticSecretSharing(SecretSharingBase):
     """
     A class for arithmetic secret sharing over a RingTensor.
 
@@ -20,35 +21,26 @@ class ArithmeticSecretSharing(ArithmeticBase):
 
     :param ring_tensor: The tensor used for secret sharing.
     :type ring_tensor: RingTensor
-    :param party: The party that holds the shared RingTensor.
-    :type party: Party
 
     .. note::
         The name of this class is abbreviated as **ASS** below.
 
     """
 
-    def __init__(self, ring_tensor, party=None):
+    def __init__(self, ring_tensor):
         """
         Initializes an ASS object.
 
         :param ring_tensor: The RingTensor used for secret sharing.
         :type ring_tensor: RingTensor
-        :param party: The party that holds the shared tensor. Defaults to None.
-        :type party: Party
         """
         assert isinstance(ring_tensor, RingTensor), "ring_tensor must be a RingTensor"
-        super().__init__(ring_tensor, party)
+        super().__init__(ring_tensor)
 
     @property
     def ring_tensor(self):
         """Get ring_tensor from an ASS instance."""
         return self.item
-
-    @property
-    def T(self):
-        """Returns an ASS instance with its dimensions reversed."""
-        return self.__class__(self.item.T, self.party)
 
     def __getitem__(self, item):
         """
@@ -61,7 +53,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
         :rtype: ArithmeticSecretSharing
 
         """
-        return ArithmeticSecretSharing(self.item[item], self.party)
+        return ArithmeticSecretSharing(self.item[item])
 
     def __setitem__(self, key, value):
         """
@@ -80,26 +72,16 @@ class ArithmeticSecretSharing(ArithmeticBase):
         else:
             raise TypeError(f"unsupported operand type(s) for setitem '{type(self)}' and {type(value)}")
 
-    def __str__(self):
-        """
-        Returns a string representation of the ASS instance.
-
-        :returns: A string that represents the ASS instance.
-        :rtype: str
-
-        """
-        return f"ArithmeticSecretSharing[\n{self.item}\n party:{self.party.party_id}\n]"
-
     def __add__(self, other):
         if isinstance(other, ArithmeticSecretSharing):
             new_tensor = self.item + other.item
-            return ArithmeticSecretSharing(new_tensor, self.party)
+            return ArithmeticSecretSharing(new_tensor)
         elif isinstance(other, RingTensor):  # for RingTensor or const number, only party 0 add it to the share tensor
-            if self.party.party_id == 0:
+            if PartyRuntime.party.party_id == 0:
                 new_tensor = self.item + other
             else:
                 new_tensor = self.item + RingTensor.zeros_like(other)
-            return ArithmeticSecretSharing(new_tensor, self.party)
+            return ArithmeticSecretSharing(new_tensor)
         elif isinstance(other, (int, float)):
             other = RingTensor.convert_to_ring(int(other * self.scale))
             return self + other
@@ -112,7 +94,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
         if isinstance(other, ArithmeticSecretSharing):
             self.item += other.item
         elif isinstance(other, RingTensor):
-            if self.party.party_id == 0:
+            if PartyRuntime.party.party_id == 0:
                 self.item += other
             else:
                 self.item += RingTensor.zeros_like(other)
@@ -125,13 +107,13 @@ class ArithmeticSecretSharing(ArithmeticBase):
     def __sub__(self, other):
         if isinstance(other, ArithmeticSecretSharing):
             new_tensor = self.item - other.item
-            return ArithmeticSecretSharing(new_tensor, self.party)
+            return ArithmeticSecretSharing(new_tensor)
         elif isinstance(other, RingTensor):
-            if self.party.party_id == 0:
+            if PartyRuntime.party.party_id == 0:
                 new_tensor = self.item - other
             else:
                 new_tensor = self.item - RingTensor.zeros_like(other)
-            return ArithmeticSecretSharing(new_tensor, self.party)
+            return ArithmeticSecretSharing(new_tensor)
         elif isinstance(other, (int, float)):
             other = RingTensor.convert_to_ring(int(other * self.scale))
             return self - other
@@ -145,7 +127,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
         if isinstance(other, ArithmeticSecretSharing):
             self.item -= other.item
         elif isinstance(other, RingTensor):
-            if self.party.party_id == 0:
+            if PartyRuntime.party.party_id == 0:
                 self.item -= other
             else:
                 self.item -= RingTensor.zeros_like(other)
@@ -173,12 +155,12 @@ class ArithmeticSecretSharing(ArithmeticBase):
         if isinstance(other, ArithmeticSecretSharing):
             res = beaver_mul(self, other)
         elif isinstance(other, RingTensor):
-            res = ArithmeticSecretSharing(RingTensor.mul(self.item, other), self.party)
+            res = ArithmeticSecretSharing(RingTensor.mul(self.item, other))
         elif isinstance(other, int):
-            return ArithmeticSecretSharing(self.item * other, self.party)
+            return ArithmeticSecretSharing(self.item * other)
         elif isinstance(other, float):
             assert self.dtype == 'float', "only float can calculate with float"
-            res = ArithmeticSecretSharing(self.item * int(other * self.scale), self.party)
+            res = ArithmeticSecretSharing(self.item * int(other * self.scale))
         else:
             raise TypeError(f"unsupported operand type(s) for * '{type(self)}' and {type(other)}")
 
@@ -205,7 +187,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
         if isinstance(other, ArithmeticSecretSharing):
             res = secure_matmul(self, other)
         elif isinstance(other, RingTensor):
-            res = ArithmeticSecretSharing(RingTensor.matmul(self.item, other), self.party)
+            res = ArithmeticSecretSharing(RingTensor.matmul(self.item, other))
         else:
             raise TypeError(f"unsupported operand type(s) for @ '{type(self)}' and {type(other)}")
 
@@ -215,7 +197,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
         if isinstance(other, ArithmeticSecretSharing):
             res = secure_matmul(other, self)
         elif isinstance(other, RingTensor):
-            res = ArithmeticSecretSharing(RingTensor.matmul(other, self.item), self.party)
+            res = ArithmeticSecretSharing(RingTensor.matmul(other, self.item))
         else:
             raise TypeError(f"unsupported operand type(s) for @ '{type(self)}' and {type(other)}")
 
@@ -380,7 +362,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
         :rtype: ArithmeticSecretSharing
         """
         result = RingTensor.cat([e.item for e in tensor_list], dim)
-        return cls(result, tensor_list[0].party)
+        return cls(result)
 
     @classmethod
     def stack(cls, tensor_list, dim=0):
@@ -398,7 +380,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
         :rtype: ArithmeticSecretSharing
         """
         result = RingTensor.stack([e.item for e in tensor_list], dim)
-        return cls(result, tensor_list[0].party)
+        return cls(result)
 
     @classmethod
     def gather(cls, input, dim, index):
@@ -418,7 +400,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
         :rtype: ArithmeticSecretSharing
         """
         result = RingTensor.gather(input.item, dim, index)
-        return cls(result, input.party)
+        return cls(result)
 
     @classmethod
     def roll(cls, input, shifts, dims=0):
@@ -438,7 +420,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
         :rtype: ArithmeticSecretSharing
         """
         result = RingTensor.roll(input.item, shifts, dims)
-        return cls(result, input.party)
+        return cls(result)
 
     @classmethod
     def rotate(cls, input, shifts):
@@ -456,7 +438,7 @@ class ArithmeticSecretSharing(ArithmeticBase):
         :rtype: ArithmeticSecretSharing
         """
         result = RingTensor.rotate(input.item, shifts)
-        return cls(result, input.party)
+        return cls(result)
 
     @classmethod
     def exp(cls, x):
@@ -527,9 +509,8 @@ class ArithmeticSecretSharing(ArithmeticBase):
          :returns: The reconstructed original data as a RingTensor.
          :rtype: RingTensor
          """
-
-        self.party.send(self)
-        other = self.party.receive()
+        PartyRuntime.party.send(self)
+        other = PartyRuntime.party.receive()
         return self.item + other.item
 
     @classmethod
@@ -545,8 +526,8 @@ class ArithmeticSecretSharing(ArithmeticBase):
         :type tensor: RingTensor
         :param num_of_party: The number of parties among which the tensor will be shared. Defaults to 2.
         :type num_of_party: int
-        :returns: A list of RingTensor shares, one for each party.
-        :rtype: List[RingTensor]
+        :returns: A list of ArithmeticSecretSharing shares, one for each party.
+        :rtype: List[ArithmeticSecretSharing]
         """
         share = []
         x_0 = tensor.clone()

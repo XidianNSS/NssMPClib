@@ -1,7 +1,7 @@
 #  This file is part of the NssMPClib project.
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
-
+from NssMPC.config.runtime import PartyRuntime
 from NssMPC.crypto.protocols.arithmetic_secret_sharing.semi_honest_functional import b2a
 from NssMPC.crypto.primitives.function_secret_sharing.dicf import SigmaDICF
 from NssMPC.config import SCALE_BIT
@@ -52,16 +52,16 @@ def secure_inv(x):
 
 
 def get_neg_exp2_k(divisor):
-    div_key = divisor.party.get_param(DivKey, divisor.numel())
+    div_key = PartyRuntime.party.get_param(DivKey, divisor.numel())
     sigma_key = div_key.sigma_key
     nexp2_key = div_key.neg_exp2_key
 
     y_shape = divisor.shape
-    y_shift = divisor.__class__(sigma_key.r_in, divisor.party) + divisor.flatten()
+    y_shift = divisor.__class__(sigma_key.r_in) + divisor.flatten()
     y_shift = y_shift.restore()
     y_shift = y_shift.view(y_shape)
 
     y_minus_powers = [y_shift - (2 ** i) for i in range(1, 2 * SCALE_BIT + 1)]
-    k = SigmaDICF.one_key_eval(y_minus_powers, sigma_key, divisor.party.party_id)
-    k = b2a(k, divisor.party).sum(dim=0)
+    k = SigmaDICF.one_key_eval(y_minus_powers, sigma_key, PartyRuntime.party.party_id)
+    k = b2a(k, PartyRuntime.party).sum(dim=0)
     return LookUp.eval(k + 1, nexp2_key.look_up_key, nexp2_key.table)

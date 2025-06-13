@@ -9,7 +9,7 @@ import pickle
 
 from NssMPC.common.network.tcp_process import TCPProcess
 from NssMPC.common.utils import *
-from NssMPC.config import SOCKET_NUM
+from NssMPC.config import SOCKET_NUM, DEVICE
 from NssMPC.common.network.async_tcp import TCPServer, TCPClient
 
 
@@ -142,6 +142,8 @@ class Communicator:
         item = self._recv_from(address)
         self.comm_rounds['recv'] += 1
         self.comm_bytes['recv'] += count_bytes(item)
+        if hasattr(item, 'device'):
+            return item.to(DEVICE)
         return item
 
     def close(self):

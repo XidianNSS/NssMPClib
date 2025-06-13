@@ -6,85 +6,34 @@ import torch
 from NssMPC.common.ring import RingTensor
 
 
-def auto_delegate(call_methods, delegate_methods):
-    """
-    A decorator that automatically delegates specified methods from `RingTensor` class to the decorated class.
-
-    This decorator allows methods from the `RingTensor` class to be called on instances of the decorated class.
-    The methods can either directly return the result or return a new instance of the class, depending on
-    whether the method is a delegate method.
-
-    :param call_methods: A list of method names that will be called directly on the `RingTensor` object.
-    :type call_methods: List[str]
-    :param delegate_methods: A list of method names that will be called on the `RingTensor` object and return a new instance of the class.
-    :type delegate_methods: List[str]
-    :returns: A decorator function that can be applied to classes to delegate methods to a `RingTensor` object.
-    :rtype: function
-
-    .. note::
-        - The decorator checks if the `RingTensor` class has the specified method before delegating. If a method is not
-          found, a warning is printed.
-        - For delegate methods, a new instance of the decorated class is returned, ensuring the operation stays within
-          the class context.
-
-    """
-
+def auto_delegate(methods=None):
     def decorator(cls):
-        """
-
-        Decorates the class by adding delegated methods.
-
-        :param cls:The class to which methods from `RingTensor` will be delegated.
-        :type cls: class
-        """
-
-        def create_delegated_method(method_name, is_delegate=False):
-            """
-            Creates a method that delegates calls to the `RingTensor` object.
-
-            :param method_name: The name of the method to delegate.
-            :type method_name: str
-            :param is_delegate: If True, the method will return a new instance of the class. Otherwise, it will return the result
-                of the method call directly (default is False).
-            :type is_delegate: bool
-            :returns:A function that delegates the method call to the `RingTensor` object.
-            :rtype: function
-            """
+        def delegate_methods(method_name):
             if not hasattr(RingTensor, method_name):
                 print(f"Warning: RingTensor does not have method '{method_name}'")
-                return
+                return None
 
             def delegate(self, *args, **kwargs):
-                """
-                Delegates the method call to the `RingTensor` object.
-
-                :returns: The result of the delegated method, or a new instance of the class if `is_delegate` is True.
-                :rtype: object
-
-                """
                 result = getattr(self.item, method_name)(*args, **kwargs)
-                if is_delegate:
-                    return self.__class__(result, self.party)
+                if isinstance(result, (RingTensor, RingPair)):
+                    return self.__class__(result)
                 return result
 
             return delegate
 
-        for name in call_methods:
-            setattr(cls, name, create_delegated_method(name))
-
-        for name in delegate_methods:
-            setattr(cls, name, create_delegated_method(name, is_delegate=True))
-
+        for name in methods or []:
+            if (method := delegate_methods(name)) is not None:
+                setattr(cls, name, method)
         return cls
 
     return decorator
 
 
 @auto_delegate(
-    call_methods=['numel', 'tolist'],
-    delegate_methods=['__neg__', '__xor__', 'reshape', 'view', 'transpose', 'squeeze', 'unsqueeze', 'flatten', 'clone',
-                      'pad', 'sum', 'repeat', 'repeat_interleave', 'permute', 'to', 'contiguous', 'expand'])
-class ArithmeticBase:
+    methods=['numel', 'tolist', '__neg__', '__xor__', 'reshape', 'view', 'transpose', 'squeeze', 'unsqueeze', 'flatten',
+             'clone',
+             'pad', 'sum', 'repeat', 'repeat_interleave', 'permute', 'to', 'contiguous', 'expand', 'load_from_file'])
+class SecretSharingBase:
     """
     Base class for arithmetic operations with auto-delegation.
 
@@ -98,7 +47,7 @@ class ArithmeticBase:
     :type party: Party
     """
 
-    def __init__(self, item, party):
+    def __init__(self, item):
         """
         Initialize an ArithmeticBase instance.
 
@@ -106,11 +55,8 @@ class ArithmeticBase:
 
         :param item: The `RingTensor` instance used for arithmetic operations.
         :type item: RingTensor or RingPair
-        :param party: The party or participant that owns the `ArithmeticBase` object.
-        :type party: Party
         """
         self.item = item
-        self.party = party
 
     @property
     def dtype(self):
@@ -147,20 +93,50 @@ class ArithmeticBase:
         """Set the bit lengths of this object."""
         self.item.bit_len = value
 
-    def __getstate__(self):
-        """
-        Create a copy of the current object's attribute dictionary.
-        And set the 'party' attribute to None.
-        """
-        state = self.__dict__.copy()
-        state['party'] = None
-        return state
+    @property
+    def T(self):
+        """Returns an ASS instance with its dimensions reversed."""
+        return self.__class__(self.item.T)
 
     def __getitem__(self, item):
-        raise NotImplementedError
+        """
+        Enables indexing for the ASS instance, allowing elements to be accessed
+        using square brackets [ ] like a list.
+
+        :param item: The position of the element to retrieve.
+        :type item: int
+        :returns: The element at the specified index from the original ASS instance
+        :rtype: ArithmeticSecretSharing
+
+        """
+        return self.__class__(self.item[item])
 
     def __setitem__(self, key, value):
-        raise NotImplementedError
+        """
+        Allows assignment to a specific index in the ASS instance
+        using square brackets [ ].
+
+        :param key: The position of the element to be set.
+        :type key: int
+        :param value: The value to assign to the specified index.
+        :type value: ArithmeticSecretSharing
+        :returns: None
+        :raises TypeError: If `value` is not of a supported type(`ASS`).
+        """
+        if isinstance(value, self.__class__):
+            self.item[key] = value.item.clone()
+        else:
+            raise TypeError(f"unsupported operand type(s) for setitem '{type(self)}' and {type(value)}")
+
+    def __str__(self):
+        """
+        Returns a string representation of the ASS instance.
+
+        :returns: A string that represents the ASS instance.
+        :rtype: str
+
+        """
+        return f"{self.__class__.__name__}[\n{self.item}\n ]"  # party:{runtime.party.party_id if runtime}\n
 
     def __neg__(self):
         raise NotImplementedError
@@ -184,9 +160,6 @@ class ArithmeticBase:
         raise NotImplementedError
 
     def __xor__(self, other):
-        raise NotImplementedError
-
-    def __str__(self):
         raise NotImplementedError
 
     def __pow__(self, power, modulo=None):
@@ -217,7 +190,7 @@ class ArithmeticBase:
         raise NotImplementedError
 
     @classmethod
-    def load_from_file(cls, file_path, party=None):
+    def load_from_file(cls, file_path):
         """
         TODO: 返回的是RingTensor，且未实现，是否正确。
         Load a ArithmeticBase object from a file.
@@ -226,14 +199,11 @@ class ArithmeticBase:
 
         :param file_path: The path from where the object should be loaded.
         :type file_path: str
-        :param party: The party that hold the ArithmeticBase object.
-        :type party: Party
         :returns: The ArithmeticBase object loaded from the file.
         :rtype: RingTensor
 
         """
         result = RingTensor.load_from_file(file_path)
-        result.party = party
         return result
 
     @classmethod
@@ -371,62 +341,18 @@ class ArithmeticBase:
 
 
 def methods_delegate():
-    """
-    A decorator that automatically delegates methods from the `RingTensor` class to the decorated class.
-
-    This decorator scans through the methods of `RingTensor` and adds any callable methods
-    (excluding static and class methods) to the decorated class, if they do not already exist.
-    The delegated methods will be applied to `_item_0` and `_item_1` attributes of the instance,
-    returning a new instance of the decorated class containing the results of the delegated method calls.
-
-    :returns: A decorator function that can be applied to classes to delegate methods from `RingTensor`.
-    :rtype: function
-
-    .. note::
-        - This decorator adds methods from `RingTensor` dynamically, ensuring that the decorated class
-          behaves similarly to `RingTensor` for those methods.
-        - The delegated methods operate on `_item_0` and `_item_1` attributes of the instance and return
-          a new instance of the decorated class with the results from these attributes.
-
-    """
-
     def decorator(cls):
-        """
-        Decorates the class by adding methods delegated from `RingTensor`.
-
-        :returns:The class to which methods from `RingTensor` will be delegated.
-        :rtype: class
-        """
 
         def create_delegated_method(method_name):
-            """
-            Creates a method that delegates calls to `_item_0` and `_item_1`.
-
-            :param method_name:The name of the method to delegate.
-            :rtype: str
-            :returns: A function that delegates the method call to `_item_0` and `_item_1`,
-                      and returns a new instance of the class with the results.
-            :rtype: function
-
-            """
-
             def delegate(self, *args, **kwargs):
-                """
-                Delegates the method call to `_item_0` and `_item_1`.
-
-                :returns: A new instance of the class with results from `_item_0` and `_item_1`.
-                :rtype: object
-
-                """
                 result_0 = getattr(self._item_0, method_name)(*args, **kwargs)
                 result_1 = getattr(self._item_1, method_name)(*args, **kwargs)
-                return self.__class__(result_0, result_1)
+                return cls(result_0, result_1)
 
             return delegate
 
         for name in RingTensor.__dict__.keys():
-            attr = getattr(RingTensor, name)
-            if name not in cls.__dict__ and callable(attr) and not isinstance(attr, (staticmethod, classmethod)):
+            if name not in cls.__dict__ and callable(getattr(RingTensor, name)):
                 setattr(cls, name, create_delegated_method(name))
 
         return cls

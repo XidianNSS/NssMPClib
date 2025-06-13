@@ -8,6 +8,7 @@
 #include <torch/extension.h>
 #include <torch/library.h>
 
+#include <c10/cuda/CUDAGuard.h>
 #include <ATen/Generator.h>
 #include <ATen/Tensor.h>
 #include <ATen/core/op_registration/op_registration.h>
@@ -296,6 +297,7 @@ Tensor encrypt_pybind(Tensor input, Tensor output, Tensor key, const std::string
     return cpu::encrypt(input, output, key, cipher, mode);
 #ifdef WITH_CUDA
   } else if (input.device().type() == DeviceType::CUDA) {
+    c10::cuda::CUDAGuard device_guard(input.device());
     return torch::csprng::cuda::encrypt(input, output, key, cipher, mode);
 #endif
   } else {
