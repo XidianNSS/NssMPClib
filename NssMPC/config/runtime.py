@@ -2,61 +2,50 @@
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
+import threading
+
+
 class Runtime:
     """
-    A class to manage the runtime environment of the NssMPClib library.
+    A thread-safe runtime manager that maintains separate contexts per thread.
     Only supports `with runtime(party):` syntax.
     """
-    _current_party = None
-    _party_stack = []
+    _thread_local = threading.local()  # Thread-local storage
 
     def __call__(self, party):
         """
-        Set the current party for the runtime context.
-        This method allows the runtime to be called with a specific party, which will be used in the context manager.
-        :param party: The party to set as the current runtime context.
-        :type party: Party
-        :return: The current instance of the Runtime class.
+        Set the current party for the current thread's runtime context.
         """
-        if self._current_party is not None:
-            self._party_stack.append(self._current_party)
-        self._current_party = party
+        if not hasattr(self._thread_local, 'party_stack'):
+            self._thread_local.party_stack = []  # Initialize per-thread stack
+        if hasattr(self._thread_local, 'current_party'):
+            self._thread_local.party_stack.append(self._thread_local.current_party)
+        self._thread_local.current_party = party
         return self
 
     def __enter__(self):
-        """
-        Enter the runtime context.
-        This method is called when entering the `with` statement. It ensures that a party has been set before entering the context.
-        """
-        if self._current_party is None:
+        """Enter the runtime context for the current thread."""
+        if not hasattr(self._thread_local, 'current_party'):
             raise RuntimeError("Runtime must be called with a party before entering the context.")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        Exit the runtime context, restoring the previous party.
-        This method is called when exiting the `with` statement. It restores the previous party from the stack if available.
-        """
-        if self._party_stack:
-            self._current_party = self._party_stack.pop()
+        """Exit the runtime context and restore the previous party for the current thread."""
+        if hasattr(self._thread_local, 'party_stack') and self._thread_local.party_stack:
+            self._thread_local.current_party = self._thread_local.party_stack.pop()
         else:
-            self._current_party = None
+            del self._thread_local.current_party  # Clean up if stack is empty
 
     @property
     def party(self):
-        """
-        Get the current party in the runtime context.
-        This property returns the current party that has been set in the runtime context.
-        :return: The current party.
-        :rtype: Party
-        """
-        if self._current_party is None:
+        """Get the current party for the current thread."""
+        if not hasattr(self._thread_local, 'current_party'):
             raise RuntimeError("No party is currently set in the runtime context.")
-        return self._current_party
+        return self._thread_local.current_party
 
 
+# Global instance, but thread-safe due to thread-local storage
 PartyRuntime = Runtime()
-
 
 class MacBuffer:
     """
