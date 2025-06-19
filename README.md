@@ -14,7 +14,7 @@ This project requires PyTorch>=1.8.0, and it is recommended to use PyTorch==2.3.
 You can install this project by executing the following command:
 
 ```bash
-pip install .
+pip install -e .
 ```
 
 If the external dependency csprng cannot be compiled and installed, it may be due to a lack of a c++ compiler or cuda
