@@ -39,6 +39,10 @@ def execute():
     }
     return jsonify(response)
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "ok"})
+
 def _run_code(code, output_queue):
     original_stdout = sys.stdout
     buffer = StringIO()
