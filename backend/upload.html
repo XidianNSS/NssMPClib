@@ -1,0 +1,836 @@
+<!doctype html>
+<html>
+<head>
+    <title>Upload File</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .upload-option { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            background: #fafafa;
+            transition: background-color 0.3s;
+        }
+        .upload-option:hover {
+            background: #f0f0f0;
+        }
+        .upload-option h3 { 
+            margin-top: 0; 
+            color: #333;
+            font-size: 1.2em;
+        }
+        input[type="file"] { 
+            margin: 15px 0; 
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input[type="file"]:hover {
+            border-color: #007cba;
+        }
+        input[type="submit"] { 
+            background: #007cba; 
+            color: white; 
+            padding: 12px 25px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover { 
+            background: #005a87; 
+        }
+        input[type="submit"]:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .info-section {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            border-left: 4px solid #007cba;
+        }
+        
+        /* 消息提示样式 */
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease-in-out;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+        .message.show {
+            transform: translateX(0);
+        }
+        .message.success {
+            background: #4caf50;
+        }
+        .message.error {
+            background: #f44336;
+        }
+        .message.warning {
+            background: #ff9800;
+        }
+        
+        /* 加载状态 */
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+            color: #007cba;
+        }
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007cba;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 配置编辑器样式 */
+        .config-editor {
+            width: 100%;
+        }
+        .config-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .config-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .config-btn:hover {
+            background: #218838;
+        }
+        .config-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .config-status {
+            margin-left: auto;
+            font-size: 14px;
+            color: #666;
+        }
+        #configEditor {
+            width: 100%;
+            height: 400px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            resize: vertical;
+            background: #f8f9fa;
+            box-sizing: border-box;
+        }
+        #configEditor:focus {
+            outline: none;
+            border-color: #007cba;
+            background: white;
+        }
+        
+        /* 文件管理器样式 */
+        .file-manager {
+            width: 100%;
+        }
+        .file-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .file-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .file-btn:hover {
+            background: #138496;
+        }
+        .file-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .file-status {
+            margin-left: auto;
+            font-size: 14px;
+            color: #666;
+        }
+        .file-list {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: white;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+        .file-item:hover {
+            background: #f8f9fa;
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        .file-icon {
+            margin-right: 8px;
+            font-size: 16px;
+            min-width: 20px;
+        }
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .file-name {
+            font-weight: 500;
+            word-break: break-word;
+        }
+        .file-details {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .file-actions {
+            display: flex;
+            gap: 5px;
+        }
+        .file-action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        .file-action-btn:hover {
+            background: #e9ecef;
+        }
+        .file-action-btn.delete:hover {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .file-children {
+            margin-left: 20px;
+        }
+        .folder-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-right: 5px;
+            font-size: 12px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        /* 快捷键样式 */
+        kbd {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+                    <h1>📁 文件管理工具</h1>
+        
+
+        
+        <div class="upload-option">
+            <h3>⚙️ 配置文件编辑器</h3>
+            <div class="config-editor">
+                <div class="config-toolbar">
+                    <button id="loadConfig" class="config-btn">🔄 加载配置</button>
+                    <button id="saveConfig" class="config-btn">💾 保存配置</button>
+                    <button id="formatConfig" class="config-btn">🎨 格式化</button>
+                    <span id="configStatus" class="config-status"></span>
+                </div>
+                <textarea id="configEditor" placeholder="配置文件将在这里显示..."></textarea>
+                <div class="loading" id="configLoading">
+                    <div class="spinner"></div>正在处理...
+                </div>
+            </div>
+        </div>
+        
+        <div class="upload-option">
+            <h3>📁 文件管理器</h3>
+            <div class="file-manager">
+                <div class="file-toolbar">
+                    <button id="refreshFiles" class="file-btn">🔄 刷新</button>
+                    <button id="uploadFiles" class="file-btn">📤 上传文件</button>
+                    <button id="uploadFolder" class="file-btn">📁 上传文件夹</button>
+                    <input type="file" id="fileUpload" style="display: none;" multiple>
+                    <input type="file" id="folderUpload" style="display: none;" webkitdirectory multiple>
+                    <span id="fileStatus" class="file-status"></span>
+                </div>
+                <div class="file-list" id="fileList">
+                    <div class="loading" id="fileLoading">
+                        <div class="spinner"></div>正在加载文件列表...
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <p><strong>💡 使用说明：</strong></p>
+            <ul>
+                <li><strong>配置编辑：</strong> 直接编辑NssMPClib配置文件</li>
+                <li><strong>文件管理：</strong> 浏览、上传、删除协议生成相关数据</li>
+                <li><strong>上传文件：</strong> 支持单个或多个文件上传</li>
+                <li><strong>上传文件夹：</strong> 保持完整目录结构上传整个文件夹</li>
+            </ul>
+            <p><strong>🔧 快捷键：</strong></p>
+            <ul>
+                <li><kbd>Ctrl + S</kbd> - 保存配置文件</li>
+                <li><kbd>Ctrl + F</kbd> - 格式化JSON</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 显示消息提示
+        function showMessage(text, type = 'success') {
+            // 移除现有消息
+            const existingMessage = document.querySelector('.message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+            
+            // 创建新消息
+            const message = document.createElement('div');
+            message.className = `message ${type}`;
+            message.textContent = text;
+            document.body.appendChild(message);
+            
+            // 显示消息
+            setTimeout(() => message.classList.add('show'), 100);
+            
+            // 自动隐藏消息
+            setTimeout(() => {
+                message.classList.remove('show');
+                setTimeout(() => message.remove(), 300);
+            }, 4000);
+        }
+        
+        // 清空文件选择
+        function clearFileInput(inputId) {
+            const input = document.getElementById(inputId);
+            input.value = '';
+            // 触发change事件以更新UI
+            input.dispatchEvent(new Event('change'));
+        }
+        
+
+        
+        // ================== 配置文件编辑器功能 ==================
+        
+        const configEditor = document.getElementById('configEditor');
+        const configStatus = document.getElementById('configStatus');
+        const configLoading = document.getElementById('configLoading');
+        
+        // 更新状态显示
+        function updateConfigStatus(text, type = 'info') {
+            configStatus.textContent = text;
+            configStatus.className = `config-status ${type}`;
+            if (type === 'success') {
+                configStatus.style.color = '#28a745';
+            } else if (type === 'error') {
+                configStatus.style.color = '#dc3545';
+            } else {
+                configStatus.style.color = '#666';
+            }
+        }
+        
+        // 设置加载状态
+        function setConfigLoading(loading) {
+            configLoading.style.display = loading ? 'block' : 'none';
+            document.getElementById('loadConfig').disabled = loading;
+            document.getElementById('saveConfig').disabled = loading;
+            document.getElementById('formatConfig').disabled = loading;
+        }
+        
+        // 加载配置文件
+        async function loadConfig() {
+            setConfigLoading(true);
+            updateConfigStatus('正在加载配置文件...');
+            
+            try {
+                const response = await fetch('/config', {
+                    method: 'GET'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    configEditor.value = result.content;
+                    if (result.exists) {
+                        updateConfigStatus('配置文件加载成功', 'success');
+                    } else {
+                        updateConfigStatus('文件不存在，已加载默认配置', 'info');
+                    }
+                } else {
+                    updateConfigStatus(result.error || '加载失败', 'error');
+                    showMessage(result.error || '加载配置文件失败', 'error');
+                }
+            } catch (error) {
+                updateConfigStatus('网络错误', 'error');
+                showMessage('网络错误，请重试', 'error');
+                console.error('加载配置文件错误:', error);
+            } finally {
+                setConfigLoading(false);
+            }
+        }
+        
+        // 保存配置文件
+        async function saveConfig() {
+            const content = configEditor.value.trim();
+            if (!content) {
+                showMessage('配置内容不能为空', 'error');
+                return;
+            }
+            
+            setConfigLoading(true);
+            updateConfigStatus('正在保存配置文件...');
+            
+            try {
+                const response = await fetch('/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content: content })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    updateConfigStatus('配置文件保存成功', 'success');
+                    showMessage(result.message, 'success');
+                } else {
+                    updateConfigStatus(result.error || '保存失败', 'error');
+                    showMessage(result.error || '保存配置文件失败', 'error');
+                }
+            } catch (error) {
+                updateConfigStatus('网络错误', 'error');
+                showMessage('网络错误，请重试', 'error');
+                console.error('保存配置文件错误:', error);
+            } finally {
+                setConfigLoading(false);
+            }
+        }
+        
+        // 格式化JSON
+        function formatConfig() {
+            try {
+                const content = configEditor.value.trim();
+                if (!content) {
+                    showMessage('没有内容可以格式化', 'warning');
+                    return;
+                }
+                
+                const parsed = JSON.parse(content);
+                const formatted = JSON.stringify(parsed, null, 4);
+                configEditor.value = formatted;
+                updateConfigStatus('JSON格式化成功', 'success');
+                showMessage('JSON格式化成功', 'success');
+            } catch (error) {
+                updateConfigStatus('JSON格式错误', 'error');
+                showMessage('JSON格式错误: ' + error.message, 'error');
+            }
+        }
+        
+        // 绑定配置编辑器事件
+        document.getElementById('loadConfig').addEventListener('click', loadConfig);
+        document.getElementById('saveConfig').addEventListener('click', saveConfig);
+        document.getElementById('formatConfig').addEventListener('click', formatConfig);
+        
+        // 页面加载时自动加载配置文件
+        window.addEventListener('load', function() {
+            setTimeout(loadConfig, 500); // 延迟500ms加载，确保页面完全渲染
+        });
+        
+        // 添加快捷键支持
+        configEditor.addEventListener('keydown', function(e) {
+            // Ctrl+S 保存
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveConfig();
+            }
+            // Ctrl+F 格式化
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                formatConfig();
+            }
+        });
+        
+        // ================== 文件管理器功能 ==================
+        
+        const fileList = document.getElementById('fileList');
+        const fileStatus = document.getElementById('fileStatus');
+        const fileLoading = document.getElementById('fileLoading');
+        const fileUpload = document.getElementById('fileUpload');
+        const folderUpload = document.getElementById('folderUpload');
+        
+        // 更新文件状态显示
+        function updateFileStatus(text, type = 'info') {
+            fileStatus.textContent = text;
+            fileStatus.className = `file-status ${type}`;
+            if (type === 'success') {
+                fileStatus.style.color = '#28a745';
+            } else if (type === 'error') {
+                fileStatus.style.color = '#dc3545';
+            } else {
+                fileStatus.style.color = '#666';
+            }
+        }
+        
+        // 设置加载状态
+        function setFileLoading(loading) {
+            fileLoading.style.display = loading ? 'block' : 'none';
+            document.getElementById('refreshFiles').disabled = loading;
+            document.getElementById('uploadFiles').disabled = loading;
+            document.getElementById('uploadFolder').disabled = loading;
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 格式化时间
+        function formatTime(timestamp) {
+            return new Date(timestamp * 1000).toLocaleString('zh-CN');
+        }
+        
+        // 获取文件图标
+        function getFileIcon(item) {
+            if (item.type === 'folder') {
+                return '📁';
+            }
+            
+            const ext = item.name.split('.').pop().toLowerCase();
+            const iconMap = {
+                'json': '📄',
+                'txt': '📝',
+                'py': '🐍',
+                'js': '💛',
+                'html': '🌐',
+                'css': '🎨',
+                'md': '📖',
+                'pdf': '📕',
+                'jpg': '🖼️',
+                'png': '🖼️',
+                'gif': '🖼️',
+                'mp4': '🎬',
+                'mp3': '🎵',
+                'zip': '📦'
+            };
+            
+            return iconMap[ext] || '📄';
+        }
+        
+        // 渲染文件项
+        function renderFileItem(item, level = 0) {
+            const div = document.createElement('div');
+            div.className = 'file-item';
+            div.style.paddingLeft = `${12 + level * 20}px`;
+            
+            const icon = getFileIcon(item);
+            const size = item.type === 'folder' ? `${item.children.length} 项` : formatFileSize(item.size);
+            const modified = formatTime(item.modified);
+            
+            div.innerHTML = `
+                ${item.type === 'folder' ? `<button class="folder-toggle" data-path="${item.path}">▶</button>` : ''}
+                <span class="file-icon">${icon}</span>
+                <div class="file-info">
+                    <div class="file-name">${item.name}</div>
+                    <div class="file-details">${size} • ${modified}</div>
+                </div>
+                <div class="file-actions">
+                    <button class="file-action-btn delete" onclick="deleteFile('${item.path}')">🗑️ 删除</button>
+                </div>
+            `;
+            
+            return div;
+        }
+        
+        // 递归渲染文件项和子项
+        function renderFileItemRecursive(item, level = 0, container) {
+            const itemElement = renderFileItem(item, level);
+            container.appendChild(itemElement);
+            
+            // 如果是文件夹且有子项，递归创建子容器
+            if (item.type === 'folder' && item.children.length > 0) {
+                const childrenContainer = document.createElement('div');
+                childrenContainer.className = 'file-children';
+                childrenContainer.style.display = 'none';
+                childrenContainer.dataset.parent = item.path;
+                
+                // 递归渲染所有子项
+                item.children.forEach(child => {
+                    renderFileItemRecursive(child, level + 1, childrenContainer);
+                });
+                
+                container.appendChild(childrenContainer);
+            }
+        }
+        
+        // 渲染文件列表
+        function renderFileList(files, container = fileList) {
+            container.innerHTML = '';
+            
+            if (!files || files.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div>📁</div>
+                        <div>目录为空</div>
+                        <div style="font-size: 12px; margin-top: 5px;">上传一些文件开始使用</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 递归渲染所有文件项
+            files.forEach(item => {
+                renderFileItemRecursive(item, 0, container);
+            });
+            
+            // 使用事件委托处理所有文件夹toggle事件
+            bindFolderToggleEvents(container);
+        }
+        
+        // 绑定文件夹展开/收起事件（使用事件委托）
+        function bindFolderToggleEvents(container) {
+            // 移除旧的事件监听器（如果存在）
+            container.removeEventListener('click', handleFolderToggle);
+            
+            // 使用事件委托处理所有toggle按钮点击
+            container.addEventListener('click', handleFolderToggle);
+        }
+        
+        // 处理文件夹toggle事件
+        function handleFolderToggle(event) {
+            // 检查点击的是否是folder-toggle按钮
+            if (event.target.classList.contains('folder-toggle')) {
+                event.stopPropagation(); // 防止事件冒泡
+                
+                const toggle = event.target;
+                const path = toggle.dataset.path;
+                
+                // 在整个文件列表中查找对应的children容器
+                const children = fileList.querySelector(`[data-parent="${path}"]`);
+                
+                if (children) {
+                    const isHidden = children.style.display === 'none';
+                    children.style.display = isHidden ? 'block' : 'none';
+                    toggle.textContent = isHidden ? '▼' : '▶';
+                }
+            }
+        }
+        
+        // 加载文件列表
+        async function loadFiles() {
+            setFileLoading(true);
+            updateFileStatus('正在加载文件列表...');
+            
+            try {
+                const response = await fetch('/files', {
+                    method: 'GET'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    renderFileList(result.files);
+                    updateFileStatus(`共 ${result.files.length} 个项目`, 'success');
+                } else {
+                    updateFileStatus(result.error || '加载失败', 'error');
+                    showMessage(result.error || '加载文件列表失败', 'error');
+                }
+            } catch (error) {
+                updateFileStatus('网络错误', 'error');
+                showMessage('网络错误，请重试', 'error');
+                console.error('加载文件列表错误:', error);
+            } finally {
+                setFileLoading(false);
+            }
+        }
+        
+        // 删除文件
+        async function deleteFile(path) {
+            if (!confirm(`确定要删除 "${path}" 吗？此操作不可撤销。`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/files', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ path: path })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(result.message, 'success');
+                    loadFiles(); // 重新加载文件列表
+                } else {
+                    showMessage(result.error || '删除失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请重试', 'error');
+                console.error('删除文件错误:', error);
+            }
+        }
+        
+        // 上传文件
+        async function uploadFiles(files, isFolder = false) {
+            if (!files || files.length === 0) return;
+            
+            const formData = new FormData();
+            
+            if (isFolder) {
+                // 文件夹上传
+                formData.append('upload_type', 'folder');
+                Array.from(files).forEach(file => {
+                    formData.append('files', file);
+                });
+            } else {
+                // 文件上传
+                if (files.length === 1) {
+                    formData.append('upload_type', 'file');
+                    formData.append('file', files[0]);
+                } else {
+                    formData.append('upload_type', 'folder');
+                    Array.from(files).forEach(file => {
+                        formData.append('files', file);
+                    });
+                }
+            }
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(result.message || `成功上传 ${files.length} 个${isFolder ? '文件' : '文件'}`, 'success');
+                    
+                    // 如果有错误信息也显示
+                    if (result.errors && result.errors.length > 0) {
+                        setTimeout(() => {
+                            showMessage(`注意: ${result.errors.length} 个文件有问题`, 'warning');
+                        }, 1000);
+                    }
+                    
+                    loadFiles(); // 重新加载文件列表
+                } else {
+                    showMessage(result.error || '上传失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请重试', 'error');
+                console.error('上传文件错误:', error);
+            }
+        }
+        
+        // 绑定文件管理器事件
+        document.getElementById('refreshFiles').addEventListener('click', loadFiles);
+        
+        document.getElementById('uploadFiles').addEventListener('click', function() {
+            fileUpload.click();
+        });
+        
+        document.getElementById('uploadFolder').addEventListener('click', function() {
+            folderUpload.click();
+        });
+        
+        fileUpload.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                uploadFiles(e.target.files, false);
+                e.target.value = ''; // 清空选择
+            }
+        });
+        
+        folderUpload.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                uploadFiles(e.target.files, true);
+                e.target.value = ''; // 清空选择
+            }
+        });
+        
+        // 页面加载时自动加载文件列表
+        window.addEventListener('load', function() {
+            setTimeout(loadFiles, 800); // 延迟800ms加载，确保配置加载完成
+        });
+        
+        // 暴露到全局作用域，供HTML内联事件使用
+        window.deleteFile = deleteFile;
+    </script>
+</body>
+</html> 
