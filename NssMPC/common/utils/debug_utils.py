@@ -6,6 +6,8 @@ import time
 from functools import wraps
 import torch
 
+from NssMPC.config.runtime import PartyRuntime
+
 RED = '\033[91m'
 GREEN = '\033[92m'
 YELLOW = '\033[93m'
@@ -229,4 +231,35 @@ def comm_count(communicator, func, *args):
     debug_print(f"Communication info of {func}:", color=YELLOW)
     debug_print(f"Comm_rounds: {communicator.comm_rounds['send'] - now_comm_rounds}", color=YELLOW)
     debug_print(f"Comm_costs: {bytes_convert(communicator.comm_bytes['send'] - now_comm_bytes)}", color=YELLOW)
+    return res
+
+
+def statistic(func, *args, times=10, warmup=5):
+    """
+    Monitor the communication overhead of specific functions,
+    including the number of communication rounds, the number of bytes sent and recv and the average time-consuming.
+    :param func:
+    :param args:
+    :param times:
+    :param warmup:
+    :return:
+    """
+    communicator = PartyRuntime.party.communicator
+    now_comm_rounds = communicator.comm_rounds['send']
+    now_comm_bytes = communicator.comm_bytes['send']
+    res = func(*args)
+    debug_print(f"Communication info of {func}:", color=YELLOW)
+    debug_print(f"Comm_rounds: {communicator.comm_rounds['send'] - now_comm_rounds}", color=YELLOW)
+    debug_print(f"Comm_costs: {bytes_convert(communicator.comm_bytes['send'] - now_comm_bytes)}", color=YELLOW)
+
+    while warmup > 0:
+        func(*args)
+        warmup -= 1
+
+    start = time.time()
+    for _ in range(times):
+        func(*args)
+    end = time.time()
+    debug_print(f"Average time consuming of {func.__name__}: {(end - start) / times}", color=GREEN)
+
     return res

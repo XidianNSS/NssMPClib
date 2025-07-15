@@ -1369,6 +1369,37 @@ class RingTensor(object):
         """
         return self.__class__(self.tensor.expand(*sizes), dtype=self.dtype, device=self.device)
 
+    def argsort(self, dim=-1):
+        """
+        Sort the elements of the RingTensor along a specified dimension and return the indices of the sorted elements.
+
+        :param dim: The dimension along which to sort the elements (default is -1, which means the last dimension).
+        :return:
+        """
+        return self.__class__(torch.argsort(self.tensor, dim=dim), dtype=self.dtype, device=self.device,
+                              bit_len=self.bit_len)
+
+    def index_add_(self, dim, index, source):
+        """
+        Add values from the source RingTensor to the specified indices in the current RingTensor.
+
+        This method uses *torch.index_add_* to perform an in-place addition of values from the source RingTensor
+        at the specified indices along the given dimension.
+
+        :param dim: The dimension along which to index.
+        :type dim: int
+        :param index: The indices at which to add values.
+        :type index: RingTensor or torch.Tensor
+        :param source: The RingTensor containing values to add.
+        :type source: RingTensor
+        :return: The updated RingTensor after in-place addition.
+        :rtype: RingTensor
+        """
+        if isinstance(index, RingTensor):
+            index = index.tensor
+        self.tensor.index_add_(dim, index, source.tensor)
+        return self
+
     @staticmethod
     def where(condition, x, y):
         """
@@ -1619,3 +1650,15 @@ class RingTensor(object):
         :rtype: RingTensor
         """
         return RingTensor(torch.arange(start, end, step, dtype=data_type, device=device), dtype)
+
+    @staticmethod
+    def batch_randperm(num, n, device=DEVICE):
+        """
+        Generate a batch of random permutations of integers from 0 to n-1.
+        :param num:
+        :param n:
+        :param device:
+        :return:
+        """
+        rand = torch.rand(num, n, device=device)
+        return RingTensor(rand.argsort(dim=1), dtype='int', device=device)

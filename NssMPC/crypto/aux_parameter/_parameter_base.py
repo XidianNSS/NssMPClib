@@ -167,9 +167,14 @@ class Parameter(metaclass=ParameterMeta):
 
     def __len__(self):
         """Returns the length of the first attribute that has a 'shape' property."""
+        fallback = None
         for attr, value in self.__dict__.items():
             if hasattr(value, 'shape'):
                 return value.shape[0]
+            elif hasattr(value, '__len__'):
+                fallback = len(value)
+        if fallback is not None:
+            return fallback
 
     def __getitem__(self, item):
         """
