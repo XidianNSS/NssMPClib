@@ -68,7 +68,7 @@
             border-left: 4px solid #007cba;
         }
         
-        /* 消息提示样式 */
+        /* message style */
         .message {
             position: fixed;
             top: 20px;
@@ -96,7 +96,7 @@
             background: #ff9800;
         }
         
-        /* 加载状态 */
+        /* loading state */
         .loading {
             display: none;
             text-align: center;
@@ -118,7 +118,7 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* 配置编辑器样式 */
+        /* config editor style */
         .config-editor {
             width: 100%;
         }
@@ -168,7 +168,7 @@
             background: white;
         }
         
-        /* 文件管理器样式 */
+        /* file manager style */
         .file-manager {
             width: 100%;
         }
@@ -275,7 +275,7 @@
             color: #666;
         }
         
-        /* 快捷键样式 */
+        /* shortcut style */
         kbd {
             background: #f8f9fa;
             border: 1px solid #ddd;
@@ -289,103 +289,103 @@
 </head>
 <body>
     <div class="container">
-                    <h1>📁 文件管理工具</h1>
+                    <h1>📁 File Management Tool</h1>
         
 
         
         <div class="upload-option">
-            <h3>⚙️ 配置文件编辑器</h3>
+            <h3>⚙️ Config Editor</h3>
             <div class="config-editor">
                 <div class="config-toolbar">
-                    <button id="loadConfig" class="config-btn">🔄 加载配置</button>
-                    <button id="saveConfig" class="config-btn">💾 保存配置</button>
-                    <button id="formatConfig" class="config-btn">🎨 格式化</button>
+                    <button id="loadConfig" class="config-btn">🔄 Load</button>
+                    <button id="saveConfig" class="config-btn">💾 Save</button>
+                    <button id="formatConfig" class="config-btn">🎨 Format</button>
                     <span id="configStatus" class="config-status"></span>
                 </div>
-                <textarea id="configEditor" placeholder="配置文件将在这里显示..."></textarea>
+                <textarea id="configEditor" placeholder="Config file will be displayed here..."></textarea>
                 <div class="loading" id="configLoading">
-                    <div class="spinner"></div>正在处理...
+                    <div class="spinner"></div>Processing...
                 </div>
             </div>
         </div>
         
         <div class="upload-option">
-            <h3>📁 文件管理器</h3>
+            <h3>📁 File Manager</h3>
             <div class="file-manager">
                 <div class="file-toolbar">
-                    <button id="refreshFiles" class="file-btn">🔄 刷新</button>
-                    <button id="uploadFiles" class="file-btn">📤 上传文件</button>
-                    <button id="uploadFolder" class="file-btn">📁 上传文件夹</button>
+                    <button id="refreshFiles" class="file-btn">🔄 Refresh</button>
+                    <button id="uploadFiles" class="file-btn">📤 Upload File</button>
+                    <button id="uploadFolder" class="file-btn">📁 Upload Folder</button>
                     <input type="file" id="fileUpload" style="display: none;" multiple>
                     <input type="file" id="folderUpload" style="display: none;" webkitdirectory multiple>
                     <span id="fileStatus" class="file-status"></span>
                 </div>
                 <div class="file-list" id="fileList">
                     <div class="loading" id="fileLoading">
-                        <div class="spinner"></div>正在加载文件列表...
+                        <div class="spinner"></div>Loading file list...
                     </div>
                 </div>
             </div>
         </div>
         
         <div class="info-section">
-            <p><strong>💡 使用说明：</strong></p>
+            <p><strong>💡 Usage:</strong></p>
             <ul>
-                <li><strong>配置编辑：</strong> 直接编辑NssMPClib配置文件</li>
-                <li><strong>文件管理：</strong> 浏览、上传、删除协议生成相关数据</li>
-                <li><strong>上传文件：</strong> 支持单个或多个文件上传</li>
-                <li><strong>上传文件夹：</strong> 保持完整目录结构上传整个文件夹</li>
+                <li><strong>Config Editor:</strong> Edit NssMPClib config file directly</li>
+                <li><strong>File Manager:</strong> Upload, and delete protocol generation related data</li>
+                <li><strong>Upload File:</strong> Support single or multiple file upload</li>
+                <li><strong>Upload Folder:</strong> Keep the complete directory structure and upload the entire folder</li>
             </ul>
-            <p><strong>🔧 快捷键：</strong></p>
+            <p><strong>🔧 Shortcuts:</strong></p>
             <ul>
-                <li><kbd>Ctrl + S</kbd> - 保存配置文件</li>
-                <li><kbd>Ctrl + F</kbd> - 格式化JSON</li>
+                <li><kbd>Ctrl + S</kbd> - Save Config</li>
+                <li><kbd>Ctrl + F</kbd> - Format JSON</li>
             </ul>
         </div>
     </div>
 
     <script>
-        // 显示消息提示
+        // show message
         function showMessage(text, type = 'success') {
-            // 移除现有消息
+            // remove existing message
             const existingMessage = document.querySelector('.message');
             if (existingMessage) {
                 existingMessage.remove();
             }
             
-            // 创建新消息
+            // create new message
             const message = document.createElement('div');
             message.className = `message ${type}`;
             message.textContent = text;
             document.body.appendChild(message);
             
-            // 显示消息
+            // show message
             setTimeout(() => message.classList.add('show'), 100);
             
-            // 自动隐藏消息
+            // auto hide message
             setTimeout(() => {
                 message.classList.remove('show');
                 setTimeout(() => message.remove(), 300);
             }, 4000);
         }
         
-        // 清空文件选择
+        // clear file selection
         function clearFileInput(inputId) {
             const input = document.getElementById(inputId);
             input.value = '';
-            // 触发change事件以更新UI
+            // trigger change event to update UI
             input.dispatchEvent(new Event('change'));
         }
         
 
         
-        // ================== 配置文件编辑器功能 ==================
+        // ================== config editor functionality ==================
         
         const configEditor = document.getElementById('configEditor');
         const configStatus = document.getElementById('configStatus');
         const configLoading = document.getElementById('configLoading');
         
-        // 更新状态显示
+        // update status display
         function updateConfigStatus(text, type = 'info') {
             configStatus.textContent = text;
             configStatus.className = `config-status ${type}`;
@@ -398,7 +398,7 @@
             }
         }
         
-        // 设置加载状态
+        // set loading state
         function setConfigLoading(loading) {
             configLoading.style.display = loading ? 'block' : 'none';
             document.getElementById('loadConfig').disabled = loading;
@@ -406,10 +406,10 @@
             document.getElementById('formatConfig').disabled = loading;
         }
         
-        // 加载配置文件
+        // load config file
         async function loadConfig() {
             setConfigLoading(true);
-            updateConfigStatus('正在加载配置文件...');
+            updateConfigStatus('Loading config file...');
             
             try {
                 const response = await fetch('/config', {
@@ -420,34 +420,30 @@
                 
                 if (response.ok) {
                     configEditor.value = result.content;
-                    if (result.exists) {
-                        updateConfigStatus('配置文件加载成功', 'success');
-                    } else {
-                        updateConfigStatus('文件不存在，已加载默认配置', 'info');
-                    }
+                    updateConfigStatus('Config file loaded successfully', 'success');
                 } else {
-                    updateConfigStatus(result.error || '加载失败', 'error');
-                    showMessage(result.error || '加载配置文件失败', 'error');
+                    updateConfigStatus(result.error || 'Load failed', 'error');
+                    showMessage(result.error || 'Load config file failed', 'error');
                 }
             } catch (error) {
-                updateConfigStatus('网络错误', 'error');
-                showMessage('网络错误，请重试', 'error');
-                console.error('加载配置文件错误:', error);
+                updateConfigStatus('Network error', 'error');
+                showMessage('Network error, please try again', 'error');
+                console.error('Load config file error:', error);
             } finally {
                 setConfigLoading(false);
             }
         }
         
-        // 保存配置文件
+        // save config file
         async function saveConfig() {
             const content = configEditor.value.trim();
             if (!content) {
-                showMessage('配置内容不能为空', 'error');
+                showMessage('Config content cannot be empty', 'error');
                 return;
             }
             
             setConfigLoading(true);
-            updateConfigStatus('正在保存配置文件...');
+            updateConfigStatus('Saving config file...');
             
             try {
                 const response = await fetch('/config', {
@@ -461,66 +457,66 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    updateConfigStatus('配置文件保存成功', 'success');
+                    updateConfigStatus('Config file saved successfully', 'success');
                     showMessage(result.message, 'success');
                 } else {
-                    updateConfigStatus(result.error || '保存失败', 'error');
-                    showMessage(result.error || '保存配置文件失败', 'error');
+                    updateConfigStatus(result.error || 'Save failed', 'error');
+                    showMessage(result.error || 'Save config file failed', 'error');
                 }
             } catch (error) {
-                updateConfigStatus('网络错误', 'error');
-                showMessage('网络错误，请重试', 'error');
-                console.error('保存配置文件错误:', error);
+                updateConfigStatus('Network error', 'error');
+                showMessage('Network error, please try again', 'error');
+                console.error('Save config file error:', error);
             } finally {
                 setConfigLoading(false);
             }
         }
         
-        // 格式化JSON
+        // format JSON
         function formatConfig() {
             try {
                 const content = configEditor.value.trim();
                 if (!content) {
-                    showMessage('没有内容可以格式化', 'warning');
+                    showMessage('No content to format', 'warning');
                     return;
                 }
                 
                 const parsed = JSON.parse(content);
                 const formatted = JSON.stringify(parsed, null, 4);
                 configEditor.value = formatted;
-                updateConfigStatus('JSON格式化成功', 'success');
-                showMessage('JSON格式化成功', 'success');
+                updateConfigStatus('JSON formatted successfully', 'success');
+                showMessage('JSON formatted successfully', 'success');
             } catch (error) {
-                updateConfigStatus('JSON格式错误', 'error');
-                showMessage('JSON格式错误: ' + error.message, 'error');
+                updateConfigStatus('JSON format error', 'error');
+                showMessage('JSON format error: ' + error.message, 'error');
             }
         }
         
-        // 绑定配置编辑器事件
+        // bind config editor events
         document.getElementById('loadConfig').addEventListener('click', loadConfig);
         document.getElementById('saveConfig').addEventListener('click', saveConfig);
         document.getElementById('formatConfig').addEventListener('click', formatConfig);
         
-        // 页面加载时自动加载配置文件
+        // load config file when page loads
         window.addEventListener('load', function() {
-            setTimeout(loadConfig, 500); // 延迟500ms加载，确保页面完全渲染
+            setTimeout(loadConfig, 500); // delay 500ms to ensure page is fully rendered
         });
         
-        // 添加快捷键支持
+        // add shortcut support
         configEditor.addEventListener('keydown', function(e) {
-            // Ctrl+S 保存
+            // Ctrl+S save
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
                 saveConfig();
             }
-            // Ctrl+F 格式化
+            // Ctrl+F format
             if (e.ctrlKey && e.key === 'f') {
                 e.preventDefault();
                 formatConfig();
             }
         });
         
-        // ================== 文件管理器功能 ==================
+        // ================== file manager functionality ==================
         
         const fileList = document.getElementById('fileList');
         const fileStatus = document.getElementById('fileStatus');
@@ -528,7 +524,7 @@
         const fileUpload = document.getElementById('fileUpload');
         const folderUpload = document.getElementById('folderUpload');
         
-        // 更新文件状态显示
+        // update file status display
         function updateFileStatus(text, type = 'info') {
             fileStatus.textContent = text;
             fileStatus.className = `file-status ${type}`;
@@ -541,7 +537,7 @@
             }
         }
         
-        // 设置加载状态
+        // set loading state
         function setFileLoading(loading) {
             fileLoading.style.display = loading ? 'block' : 'none';
             document.getElementById('refreshFiles').disabled = loading;
@@ -549,7 +545,7 @@
             document.getElementById('uploadFolder').disabled = loading;
         }
         
-        // 格式化文件大小
+        // format file size
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 B';
             const k = 1024;
@@ -558,12 +554,12 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
         
-        // 格式化时间
+        // format time
         function formatTime(timestamp) {
             return new Date(timestamp * 1000).toLocaleString('zh-CN');
         }
         
-        // 获取文件图标
+        // get file icon
         function getFileIcon(item) {
             if (item.type === 'folder') {
                 return '📁';
@@ -590,14 +586,14 @@
             return iconMap[ext] || '📄';
         }
         
-        // 渲染文件项
+        // render file item
         function renderFileItem(item, level = 0) {
             const div = document.createElement('div');
             div.className = 'file-item';
             div.style.paddingLeft = `${12 + level * 20}px`;
             
             const icon = getFileIcon(item);
-            const size = item.type === 'folder' ? `${item.children.length} 项` : formatFileSize(item.size);
+            const size = item.type === 'folder' ? `${item.children.length} items` : formatFileSize(item.size);
             const modified = formatTime(item.modified);
             
             div.innerHTML = `
@@ -608,26 +604,26 @@
                     <div class="file-details">${size} • ${modified}</div>
                 </div>
                 <div class="file-actions">
-                    <button class="file-action-btn delete" onclick="deleteFile('${item.path}')">🗑️ 删除</button>
+                    <button class="file-action-btn delete" onclick="deleteFile('${item.path}')">🗑️ Delete</button>
                 </div>
             `;
             
             return div;
         }
         
-        // 递归渲染文件项和子项
+        // recursively render file items and sub-items
         function renderFileItemRecursive(item, level = 0, container) {
             const itemElement = renderFileItem(item, level);
             container.appendChild(itemElement);
             
-            // 如果是文件夹且有子项，递归创建子容器
+            // if it's a folder and has sub-items, recursively create sub-container
             if (item.type === 'folder' && item.children.length > 0) {
                 const childrenContainer = document.createElement('div');
                 childrenContainer.className = 'file-children';
                 childrenContainer.style.display = 'none';
                 childrenContainer.dataset.parent = item.path;
                 
-                // 递归渲染所有子项
+                // recursively render all sub-items
                 item.children.forEach(child => {
                     renderFileItemRecursive(child, level + 1, childrenContainer);
                 });
@@ -636,7 +632,7 @@
             }
         }
         
-        // 渲染文件列表
+        // render file list
         function renderFileList(files, container = fileList) {
             container.innerHTML = '';
             
@@ -644,41 +640,41 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <div>📁</div>
-                        <div>目录为空</div>
-                        <div style="font-size: 12px; margin-top: 5px;">上传一些文件开始使用</div>
+                        <div>Directory is empty</div>
+                        <div style="font-size: 12px; margin-top: 5px;">Upload some files to start using</div>
                     </div>
                 `;
                 return;
             }
             
-            // 递归渲染所有文件项
+            // recursively render all file items
             files.forEach(item => {
                 renderFileItemRecursive(item, 0, container);
             });
             
-            // 使用事件委托处理所有文件夹toggle事件
+            // use event delegation to handle all folder toggle events
             bindFolderToggleEvents(container);
         }
         
-        // 绑定文件夹展开/收起事件（使用事件委托）
+        // bind folder expand/collapse events (use event delegation)
         function bindFolderToggleEvents(container) {
-            // 移除旧的事件监听器（如果存在）
+            // remove old event listeners (if any)
             container.removeEventListener('click', handleFolderToggle);
             
-            // 使用事件委托处理所有toggle按钮点击
+            // use event delegation to handle all toggle button clicks
             container.addEventListener('click', handleFolderToggle);
         }
         
-        // 处理文件夹toggle事件
+        // handle folder toggle event
         function handleFolderToggle(event) {
-            // 检查点击的是否是folder-toggle按钮
+            // check if the clicked element is a folder-toggle button
             if (event.target.classList.contains('folder-toggle')) {
-                event.stopPropagation(); // 防止事件冒泡
+                event.stopPropagation(); // prevent event bubbling
                 
                 const toggle = event.target;
                 const path = toggle.dataset.path;
                 
-                // 在整个文件列表中查找对应的children容器
+                // find the corresponding children container in the entire file list
                 const children = fileList.querySelector(`[data-parent="${path}"]`);
                 
                 if (children) {
@@ -689,10 +685,10 @@
             }
         }
         
-        // 加载文件列表
+        // load file list
         async function loadFiles() {
             setFileLoading(true);
-            updateFileStatus('正在加载文件列表...');
+            updateFileStatus('Loading file list...');
             
             try {
                 const response = await fetch('/files', {
@@ -703,23 +699,23 @@
                 
                 if (response.ok) {
                     renderFileList(result.files);
-                    updateFileStatus(`共 ${result.files.length} 个项目`, 'success');
+                    updateFileStatus(`${result.files.length} items`, 'success');
                 } else {
-                    updateFileStatus(result.error || '加载失败', 'error');
-                    showMessage(result.error || '加载文件列表失败', 'error');
+                    updateFileStatus(result.error || 'Load failed', 'error');
+                    showMessage(result.error || 'Load file list failed', 'error');
                 }
             } catch (error) {
-                updateFileStatus('网络错误', 'error');
-                showMessage('网络错误，请重试', 'error');
-                console.error('加载文件列表错误:', error);
+                updateFileStatus('Network error', 'error');
+                showMessage('Network error, please try again', 'error');
+                console.error('Load file list error:', error);
             } finally {
                 setFileLoading(false);
             }
         }
         
-        // 删除文件
+        // delete file
         async function deleteFile(path) {
-            if (!confirm(`确定要删除 "${path}" 吗？此操作不可撤销。`)) {
+            if (!confirm(`Are you sure you want to delete "${path}"? This action cannot be undone.`)) {
                 return;
             }
             
@@ -736,30 +732,30 @@
                 
                 if (response.ok) {
                     showMessage(result.message, 'success');
-                    loadFiles(); // 重新加载文件列表
+                    loadFiles(); // reload file list
                 } else {
-                    showMessage(result.error || '删除失败', 'error');
+                    showMessage(result.error || 'Delete failed', 'error');
                 }
             } catch (error) {
-                showMessage('网络错误，请重试', 'error');
-                console.error('删除文件错误:', error);
+                showMessage('Network error, please try again', 'error');
+                console.error('Delete file error:', error);
             }
         }
         
-        // 上传文件
+        // upload file
         async function uploadFiles(files, isFolder = false) {
             if (!files || files.length === 0) return;
             
             const formData = new FormData();
             
             if (isFolder) {
-                // 文件夹上传
+                // folder upload
                 formData.append('upload_type', 'folder');
                 Array.from(files).forEach(file => {
                     formData.append('files', file);
                 });
             } else {
-                // 文件上传
+                // file upload
                 if (files.length === 1) {
                     formData.append('upload_type', 'file');
                     formData.append('file', files[0]);
@@ -780,26 +776,26 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    showMessage(result.message || `成功上传 ${files.length} 个${isFolder ? '文件' : '文件'}`, 'success');
+                    showMessage(result.message || `Successfully uploaded ${files.length} ${isFolder ? 'files' : 'file'}`, 'success');
                     
-                    // 如果有错误信息也显示
+                    // if there are error messages, also show them
                     if (result.errors && result.errors.length > 0) {
                         setTimeout(() => {
-                            showMessage(`注意: ${result.errors.length} 个文件有问题`, 'warning');
+                            showMessage(`Warning: ${result.errors.length} files have problems`, 'warning');
                         }, 1000);
                     }
                     
-                    loadFiles(); // 重新加载文件列表
+                    loadFiles(); // reload file list
                 } else {
-                    showMessage(result.error || '上传失败', 'error');
+                    showMessage(result.error || 'Upload failed', 'error');
                 }
             } catch (error) {
-                showMessage('网络错误，请重试', 'error');
-                console.error('上传文件错误:', error);
+                showMessage('Network error, please try again', 'error');
+                console.error('Upload file error:', error);
             }
         }
         
-        // 绑定文件管理器事件
+        // bind file manager events
         document.getElementById('refreshFiles').addEventListener('click', loadFiles);
         
         document.getElementById('uploadFiles').addEventListener('click', function() {
@@ -813,23 +809,23 @@
         fileUpload.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 uploadFiles(e.target.files, false);
-                e.target.value = ''; // 清空选择
+                e.target.value = ''; // clear selection
             }
         });
         
         folderUpload.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 uploadFiles(e.target.files, true);
-                e.target.value = ''; // 清空选择
+                e.target.value = ''; // clear selection
             }
         });
         
-        // 页面加载时自动加载文件列表
+        // load file list when page loads
         window.addEventListener('load', function() {
-            setTimeout(loadFiles, 800); // 延迟800ms加载，确保配置加载完成
+            setTimeout(loadFiles, 800); // delay 800ms to ensure config is loaded
         });
         
-        // 暴露到全局作用域，供HTML内联事件使用
+        // expose to global scope, for HTML inline events
         window.deleteFile = deleteFile;
     </script>
 </body>

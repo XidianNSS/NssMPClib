@@ -1,5 +1,5 @@
 FROM pytorch/pytorch:2.6.0-cuda12.4-cudnn9-devel
-# 设置工作目录
+# Set working directory
 WORKDIR /app
 COPY . .
 
