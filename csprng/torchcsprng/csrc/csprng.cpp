@@ -8,14 +8,15 @@
 #include <torch/extension.h>
 #include <torch/library.h>
 
-#include <c10/cuda/CUDAGuard.h>
 #include <ATen/Generator.h>
 #include <ATen/Tensor.h>
 #include <ATen/core/op_registration/op_registration.h>
 
 #include "kernels_commons.h"
 #include "cpu/kernels.h"
+
 #ifdef WITH_CUDA
+#include <c10/cuda/CUDAGuard.h>
 #include "cuda/kernels.cuh"
 #endif
 
