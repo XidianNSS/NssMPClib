@@ -368,10 +368,9 @@ def _run_code(code, output_queue):
         output_queue.put((buffer.getvalue(), error, stack_trace))
 
 if __name__ == '__main__':
-    # import argparse
-    # parser = argparse.ArgumentParser(description="interpreter service")
-    # parser.add_argument("--port", type=int, help="port", required=True)
-    # args = parser.parse_args()
+    import argparse
+    parser = argparse.ArgumentParser(description="interpreter service")
+    parser.add_argument("--port", type=int, help="port", required=True)
+    args = parser.parse_args()
 
-    # app.run(host='0.0.0.0', port=args.port)
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=args.port)
