@@ -31,8 +31,8 @@ def auto_delegate(methods=None):
 
 @auto_delegate(
     methods=['numel', 'tolist', '__neg__', '__xor__', 'reshape', 'view', 'transpose', 'squeeze', 'unsqueeze', 'flatten',
-             'clone',
-             'pad', 'sum', 'repeat', 'repeat_interleave', 'permute', 'to', 'contiguous', 'expand', 'load_from_file'])
+             'clone', 'pad', 'sum', 'repeat', 'repeat_interleave', 'permute', 'to', 'contiguous', 'expand',
+             'index_select', 'load_from_file'])
 class SecretSharingBase:
     """
     Base class for arithmetic operations with auto-delegation.
@@ -294,6 +294,9 @@ class SecretSharingBase:
         raise NotImplementedError
 
     def flatten(self, start_dim=0, end_dim=-1):
+        raise NotImplementedError
+
+    def index_select(self, dim, index):
         raise NotImplementedError
 
     def clone(self):

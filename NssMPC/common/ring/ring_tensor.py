@@ -7,6 +7,7 @@ from functools import singledispatchmethod
 import torch
 import torch.nn.functional as F
 from NssMPC.common.utils import cuda_matmul
+from NssMPC.common.utils.cuda_utils import cuda_rotate
 from NssMPC.config import BIT_LEN, DEVICE, data_type, DTYPE_MAPPING, DTYPE_SCALE_MAPPING, HALF_RING
 
 
@@ -849,12 +850,16 @@ class RingTensor(object):
         elif isinstance(shifts, RingTensor):
             shifts = shifts.tensor
 
-        n = input.shape[1]
-        rows = torch.arange(input.shape[0]).view(-1, 1)
-        indices = (torch.arange(n, device=shifts.device) - shifts.view(-1, 1)) % n
-        result = input[rows, indices]
+        if 'cuda' in input.device:
+            result = cuda_rotate(input.tensor, shifts)
+            return cls(result, input.dtype, input.device, input.bit_len)
+        else:
+            n = input.shape[1]
+            rows = torch.arange(input.shape[0]).view(-1, 1)
+            indices = (torch.arange(n, device=shifts.device) - shifts.view(-1, 1)) % n
+            result = input[rows, indices]
 
-        return result
+            return result
 
     @classmethod
     def onehot(cls, input, num_classes=-1):
@@ -1377,6 +1382,25 @@ class RingTensor(object):
         :return:
         """
         return self.__class__(torch.argsort(self.tensor, dim=dim), dtype=self.dtype, device=self.device,
+                              bit_len=self.bit_len)
+
+    def index_select(self, dim, index):
+        """
+        Select elements from the RingTensor along a specified dimension using the provided indices.
+
+        This method uses *torch.index_select* to gather elements from the RingTensor at the specified indices along the given dimension.
+
+        :param dim: The dimension along which to select elements.
+        :type dim: int
+        :param index: The indices of the elements to select.
+        :type index: RingTensor or torch.Tensor
+        :return: A new RingTensor containing the selected elements.
+        :rtype: RingTensor
+        """
+        assert isinstance(index, (RingTensor, torch.Tensor)), "index must be RingTensor or torch.Tensor"
+        if isinstance(index, RingTensor):
+            index = index.tensor
+        return self.__class__(torch.index_select(self.tensor, dim, index), dtype=self.dtype, device=self.device,
                               bit_len=self.bit_len)
 
     def index_add_(self, dim, index, source):

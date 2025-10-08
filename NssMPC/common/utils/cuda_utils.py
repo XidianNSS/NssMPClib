@@ -3,8 +3,18 @@
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 import math
+from typing import Callable
 
 import torch
+
+_HAS_TRITON = False
+try:
+    import triton
+    import triton.language as tl
+
+    _HAS_TRITON = True
+except Exception:
+    _HAS_TRITON = False
 
 from NssMPC.config import data_type, RING_MAX
 
@@ -115,3 +125,47 @@ def split_matrix(x, block_num, bit_len=64):
         x_ = x_ >> block_size
     x_block.append(x_.to(torch.float64))
     return x_block
+
+
+if _HAS_TRITON:
+    def rotate_by_triton(inputs, shifts, block_n: int = 256):
+        n = inputs.shape[1]
+        b = shifts.numel()
+
+        s = shifts.to(torch.int32)
+        s = ((s % n) + n) % n
+
+        out = torch.empty((b, n), dtype=inputs.dtype, device=inputs.device)
+        grid = (b, (n + block_n - 1) // block_n)
+        _roll_kernel[grid](inputs, out, s, n, block_n)
+        return out
+
+
+    @triton.jit
+    def _roll_kernel(x_ptr, out_ptr, shifts_ptr, n: tl.constexpr, block_n: tl.constexpr):
+        row_id = tl.program_id(0)
+        col_blk = tl.program_id(1)
+
+        cols = col_blk * block_n + tl.arange(0, block_n)
+        mask = cols < n
+
+        s = tl.load(shifts_ptr + row_id)
+
+        src = cols + (n - s)
+        src = tl.where(src >= n, src - n, src)
+
+        vals = tl.load(x_ptr + src, mask=mask, other=0)
+        tl.store(out_ptr + row_id * n + cols, vals, mask=mask)
+
+
+    cuda_rotate: Callable = rotate_by_triton
+else:
+    def rotate_by_torch(inputs, shifts):
+        n = inputs.shape[1]
+        rows = torch.arange(inputs.shape[0]).view(-1, 1)
+        indices = (torch.arange(n, device=shifts.device) - shifts.view(-1, 1)) % n
+        result = inputs[rows, indices]
+        return result
+
+
+    cuda_rotate: Callable = rotate_by_torch
