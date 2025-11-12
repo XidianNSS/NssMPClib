@@ -14,6 +14,7 @@ from NssMPC.common.utils import convert_tensor
 from NssMPC.config import HALF_RING, LAMBDA, data_type, BIT_LEN, DEVICE, PRG_TYPE
 from NssMPC.crypto.aux_parameter import Parameter
 from NssMPC.crypto.aux_parameter.function_secret_sharing_keys import CW, CWList
+from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.cw import gen_dpf_cw
 
 
 class VDPFKey(Parameter):
@@ -100,8 +101,8 @@ def vdpf_gen(num_of_keys, alpha, beta):
     prg = PRG(PRG_TYPE, DEVICE)
 
     for i in range(alpha.bit_len):
-        s_l_0, t_l_0, s_r_0, t_r_0 = CW.gen_dpf_cw(prg, s_last_0, LAMBDA)
-        s_l_1, t_l_1, s_r_1, t_r_1 = CW.gen_dpf_cw(prg, s_last_1, LAMBDA)
+        s_l_0, t_l_0, s_r_0, t_r_0 = gen_dpf_cw(prg._prg, s_last_0, LAMBDA)
+        s_l_1, t_l_1, s_r_1, t_r_1 = gen_dpf_cw(prg._prg, s_last_1, LAMBDA)
 
         cond = (alpha.get_tensor_bit(alpha.bit_len - 1 - i) == 0).view(-1, 1)
 

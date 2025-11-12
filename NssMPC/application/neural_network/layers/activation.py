@@ -175,7 +175,7 @@ class SecReLU(torch.nn.Module):
         :return: Result of ReLU operation
         :rtype: RingTensor
         """
-        return (x > 0) * x
+        return (x >= 0) * x
 
 
 def _SecReLU(x):

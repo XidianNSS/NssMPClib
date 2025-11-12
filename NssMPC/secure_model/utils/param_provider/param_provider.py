@@ -45,6 +45,8 @@ class ParamProvider(BaseParamProvider):
             file_name = saved_name
         file_path = os.path.join(self.root_path, file_name)
         self.param = self.param_type.load(file_path=file_path)
+        if DEBUG_LEVEL == 2:
+            self.param = self.param.to('cuda')
         self.buffer = self.param.clone()
         self.left_ptr = len(self.param)
 

@@ -483,7 +483,7 @@ class RingTensor(object):
         else:
             raise TypeError(
                 "unsupported operand type(s) for > 'RingTensor' and ", type(other), 'please convert to ring first')
-        return self.__class__(new_value, self.dtype, self.device)
+        return self.__class__(new_value.to(self.tensor.dtype), self.dtype, self.device)
 
     def __ge__(self, other):
         """
@@ -504,7 +504,7 @@ class RingTensor(object):
         else:
             raise TypeError(
                 "unsupported operand type(s) for >= 'RingTensor' and ", type(other), 'please convert to ring first')
-        return self.__class__(new_value, self.dtype, self.device)
+        return self.__class__(new_value.to(self.tensor.dtype), self.dtype, self.device)
 
     def __lt__(self, other):
         """
@@ -525,7 +525,7 @@ class RingTensor(object):
         else:
             raise TypeError(
                 "unsupported operand type(s) for < 'RingTensor' and ", type(other), 'please convert to ring first')
-        return self.__class__(new_value, self.dtype, self.device)
+        return self.__class__(new_value.to(self.tensor.dtype), self.dtype, self.device)
 
     def __le__(self, other):
         """
@@ -547,7 +547,7 @@ class RingTensor(object):
             raise TypeError(
                 "unsupported operand type(s) for <= 'RingTensor' and ", type(other), 'please convert to '
                                                                                      'ring first')
-        return self.__class__(new_value, self.dtype, self.device)
+        return self.__class__(new_value.to(self.tensor.dtype), self.dtype, self.device)
 
     def __xor__(self, other):
         """
@@ -1423,6 +1423,9 @@ class RingTensor(object):
             index = index.tensor
         self.tensor.index_add_(dim, index, source.tensor)
         return self
+
+    def element_size(self):
+        return self.tensor.element_size()
 
     @staticmethod
     def where(condition, x, y):

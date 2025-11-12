@@ -19,6 +19,7 @@ from NssMPC.common.random import PRG
 from NssMPC.common.utils import convert_tensor
 from NssMPC.config import DEVICE, LAMBDA, PRG_TYPE
 from NssMPC.crypto.aux_parameter.function_secret_sharing_keys import CW
+from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.cw import gen_dpf_cw
 from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.vdpf_key import VDPFKey
 
 
@@ -211,7 +212,7 @@ def ver_ppq_dpf(x, keys, party_id):
         t_cw_l = cw.t_cw_l
         t_cw_r = cw.t_cw_r
 
-        s_l, t_l, s_r, t_r = CW.gen_dpf_cw(prg, s_last, LAMBDA)
+        s_l, t_l, s_r, t_r = gen_dpf_cw(prg._prg, s_last, LAMBDA)
 
         s1_l = s_l ^ (s_cw * t_last)
         t1_l = t_l ^ (t_cw_l * t_last)

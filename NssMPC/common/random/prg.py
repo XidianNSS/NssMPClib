@@ -27,8 +27,8 @@ class PRG(object):
             * **_prg** (*PRG*): AES_PRG instance
             * **dtype** (*Type*): The data type of the seed
         """
-        self.kernel = kernel
-        self._prg = AES_PRG()
+        # self.kernel = kernel
+        self._prg = torch.classes.csprng_aes.AES_PRG()
         self.dtype = None
 
     @property

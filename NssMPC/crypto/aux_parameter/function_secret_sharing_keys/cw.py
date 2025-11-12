@@ -3,9 +3,10 @@
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 import torch
+import torchcsprng
 
 from NssMPC.common.ring.ring_tensor import RingTensor
-from NssMPC.config import BIT_LEN
+from NssMPC.config import BIT_LEN, DEVICE
 
 
 class CW(object):
@@ -82,7 +83,7 @@ class CW(object):
         return self
 
     @staticmethod
-    def gen_dcf_cw(prg, new_seeds, lmd):
+    def gen_dcf_cw(prg:torch.classes.csprng_aes.AES_PRG, new_seeds, lmd:int, bit_len:int=BIT_LEN):
         """
         Generate the CW (correction words) for DCF.
 
@@ -103,59 +104,57 @@ class CW(object):
         :raises ValueError: If kernel is not 'AES'.
         """
         prg.set_seeds(new_seeds)
-        if prg.kernel == 'AES':
-            random_bits = prg.bit_random_tensor(4 * lmd + 2)
-            s_num = 128 // BIT_LEN
-            s_l_res = random_bits[..., 0:s_num]
-            v_l_res = random_bits[..., s_num: s_num + s_num]
+        random_bits = prg.bit_random_tensor(4 * lmd + 2)
+        s_num = 128 // bit_len
+        s_l_res = random_bits[..., 0:s_num]
+        v_l_res = random_bits[..., s_num: s_num + s_num]
 
-            s_r_res = random_bits[..., 2 * s_num: 2 * s_num + s_num]
+        s_r_res = random_bits[..., 2 * s_num: 2 * s_num + s_num]
 
-            v_r_res = random_bits[..., 3 * s_num: 3 * s_num + s_num]
+        v_r_res = random_bits[..., 3 * s_num: 3 * s_num + s_num]
 
-            t_l_res = random_bits[..., 4 * s_num] & 1
-            t_l_res = t_l_res.unsqueeze(-1)
-            t_r_res = random_bits[..., 4 * s_num] >> 1 & 1
-            t_r_res = t_r_res.unsqueeze(-1)
-            return s_l_res, v_l_res, t_l_res, s_r_res, v_r_res, t_r_res
-        else:
-            raise ValueError("kernel is not supported!")
+        t_l_res = random_bits[..., 4 * s_num] & 1
+        t_l_res = t_l_res.unsqueeze(-1)
+        t_r_res = random_bits[..., 4 * s_num] >> 1 & 1
+        t_r_res = t_r_res.unsqueeze(-1)
+        return s_l_res, v_l_res, t_l_res, s_r_res, v_r_res, t_r_res
+        # else:
+        #     raise ValueError("kernel is not supported!")
 
-    @staticmethod
-    def gen_dpf_cw(prg, new_seeds, lmd):
-        """
-        Generate the CW (correction words) for DPF.
 
-        We use this method to generate the correction words used for the computation of DPF,
-        and return the items contained in the correction words as tuples.
+@torch.jit.script
+def gen_dpf_cw(prg:torch.classes.csprng_aes.AES_PRG, new_seeds, lmd:int, bit_len:int=BIT_LEN):
+    """
+    Generate the CW (correction words) for DPF.
 
-        .. note::
-            Only PRG with AES kernel is supported.
+    We use this method to generate the correction words used for the computation of DPF,
+    and return the items contained in the correction words as tuples.
 
-        :param prg: The pseudorandom generator (prg) we used for the generation of cw.
-        :type prg: PRG
-        :param new_seeds: The seeds used to set the prg.
-        :type new_seeds: RingTensor or torch.Tensor
-        :param lmd: The auxiliary parameter used to set the binary bit length of CW.
-        :return: The tuples containing the items of CW.
-        :rtype: tuple
-        :raises ValueError: If kernel is not 'AES'.
-        """
-        prg.set_seeds(new_seeds)
-        if prg.kernel == 'AES':
-            random_bits = prg.bit_random_tensor(2 * lmd + 2)
-            s_num = 128 // BIT_LEN
-            s_l_res = random_bits[..., 0:s_num]
+    .. note::
+        Only PRG with AES kernel is supported.
 
-            s_r_res = random_bits[..., s_num: s_num + s_num]
+    :param prg: The pseudorandom generator (prg) we used for the generation of cw.
+    :type prg: PRG
+    :param new_seeds: The seeds used to set the prg.
+    :type new_seeds: RingTensor or torch.Tensor
+    :param lmd: The auxiliary parameter used to set the binary bit length of CW.
+    :return: The tuples containing the items of CW.
+    :rtype: tuple
+    :raises ValueError: If kernel is not 'AES'.
+    """
+    prg.set_seeds(new_seeds)
 
-            t_l_res = random_bits[..., s_num + s_num] & 1
-            t_l_res = t_l_res.unsqueeze(-1)
-            t_r_res = random_bits[..., s_num + s_num] >> 1 & 1
-            t_r_res = t_r_res.unsqueeze(-1)
-            return s_l_res, t_l_res, s_r_res, t_r_res
-        else:
-            raise ValueError("kernel is not supported!")
+    random_bits = prg.bit_random(2 * lmd + 2)
+    s_num = 128 // bit_len
+    s_l_res = random_bits[..., 0:s_num]
+
+    s_r_res = random_bits[..., s_num: s_num + s_num]
+
+    t_l_res = random_bits[..., s_num + s_num] & 1
+    t_l_res = t_l_res.unsqueeze(-1)
+    t_r_res = random_bits[..., s_num + s_num] >> 1 & 1
+    t_r_res = t_r_res.unsqueeze(-1)
+    return s_l_res, t_l_res, s_r_res, t_r_res
 
 
 class CWList(list):

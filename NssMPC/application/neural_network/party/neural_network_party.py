@@ -234,3 +234,86 @@ class HonestMajorityNeuralNetWork3PC(HonestMajorityParty):
         self.send((self.party_id + 2) % 3, 0)
         self.receive((self.party_id + 1) % 3)
         self.receive((self.party_id + 2) % 3)
+
+class SemiHonestNeuralNetWork3PC(SemiHonest3PCParty):
+    def __init__(self, party_id):
+        """
+        Calling the Constructor of the Parent Class to initialize HonestMajorityNeuralNetWork3PC.
+
+        :param party_id: Participant Identity
+        :type party_id: int
+        """
+        super().__init__(party_id)
+
+    def dummy_model(self, *args):
+        """
+        Process the input data and generate the necessary shared data.
+
+        If it is a **client**:
+            After the synchronization wait, first determine the type of ``test_loader`` and create a new tensor with the same shape as the given tensor, and all elements are 1. Then send the batch quantity num to the other party, if DEBUG_LEVEL not 2, call :func:`~NssMPC.application.neural_network.utils.converter.gen_mat_beaver` to generate beaver triples, Send it to another party.
+
+        If it is a **server**:
+            The batch number and matrix triples from the first participant are received and stored.
+
+        :return: batch number
+        :rtype: int
+        """
+        self.wait()
+        num = 1
+        if self.party_id == 0:
+            # 数据提供方
+            net, test_loader = args
+            if isinstance(test_loader, torch.Tensor):
+                dummy_input = torch.ones_like(test_loader)
+            elif isinstance(test_loader, str):
+                dummy_input = torch.ones_like(image2tensor(test_loader))
+            elif isinstance(test_loader, torch.utils.data.DataLoader):
+                num = len(test_loader.dataset) // test_loader.batch_size
+                dummy_input = torch.ones_like(enumerate(test_loader).__next__()[1][0])
+            else:
+                raise TypeError("unsupported data type:", type(test_loader))
+
+            self.send(1, torch.tensor(num))
+            self.send(2, torch.tensor(num))
+
+
+        else:
+            num = self.receive(0).item()
+
+
+        return num
+
+    def inference(self, net, input_shares):
+        start_send_round = self.communicator.comm_rounds['send']
+        start_recv_round = self.communicator.comm_rounds['recv']
+        start_send = self.communicator.comm_bytes['send']
+        start_recv = self.communicator.comm_bytes['recv']
+
+        output = net(input_shares)
+
+        end_send_round = self.communicator.comm_rounds['send']
+        end_recv_round = self.communicator.comm_rounds['recv']
+        end_send = self.communicator.comm_bytes['send']
+        end_recv = self.communicator.comm_bytes['recv']
+        send_round = end_send_round - start_send_round
+        recv_round = end_recv_round - start_recv_round
+        send = bytes_convert(end_send - start_send)
+        recv = bytes_convert(end_recv - start_recv)
+        print(f"Communication costs:\n\tsend rounds: {send_round}\t\t"
+              f"send bytes: {send}.")
+        print(f"\trecv rounds: {recv_round}\t\t"
+              f"recv bytes: {recv}.")
+
+        output = output.restore()
+        return output.convert_to_real_field()
+
+    def wait(self):
+        """
+        Ensure synchronisation of communications between the two parties.
+
+        Each party sends a message to the other two first to ensure that the communication is synchronized.
+        """
+        self.send((self.party_id + 1) % 3, 0)
+        self.send((self.party_id + 2) % 3, 0)
+        self.receive((self.party_id + 1) % 3)
+        self.receive((self.party_id + 2) % 3)

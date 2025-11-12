@@ -71,7 +71,7 @@ class OT(object):
         m0_masked = party.receive(sender_id)
         m1_masked = party.receive(sender_id)
         wc = party.receive(helper_id)
-        cond = (c > 0) + 0
+        cond = c > 0
         mc = m0_masked * (1 - cond) + m1_masked * cond
         mc = mc ^ wc
 

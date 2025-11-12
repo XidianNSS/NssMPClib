@@ -396,6 +396,21 @@ void aes_ctr_decrypt(Tensor input, Tensor output, uint8_t* key_bytes) {
   aes_ctr_encrypt(input, output, key_bytes);
 }
 
+void aes_custom_encrypt(Tensor input, Tensor output, uint8_t* key_bytes) {
+  const int64_t seq_length = input.size(-1) * input.element_size() / aes::block_t_size;
+
+  block_cipher<aes::block_t_size>(input, output,
+    [key_bytes, seq_length] __device__ (int64_t idx, uint8_t* block) -> void {
+      int64_t seq_idx = idx % seq_length;
+      *(reinterpret_cast<int64_t*>(block)) += seq_idx;
+      aes::encrypt(block, key_bytes);
+    }
+  );
+}
+
+void aes_custom_decrypt(Tensor input, Tensor output, uint8_t* key_bytes) {
+  aes_custom_encrypt(input, output, key_bytes);
+}
 Tensor encrypt(Tensor input, Tensor output, Tensor key, const std::string& cipher, const std::string& mode) {
   TORCH_CHECK(input.device() == output.device() && input.device() == key.device(), "input, output and key tensors must have the same device");
   const auto output_size_bytes = output.numel() * output.itemsize();
@@ -411,8 +426,10 @@ Tensor encrypt(Tensor input, Tensor output, Tensor key, const std::string& ciphe
     aes_ecb_encrypt(input, output, key_bytes);
   } else if (mode == "ctr") {
     aes_ctr_encrypt(input, output, key_bytes);
+  } else if (mode == "custom") {
+    aes_custom_encrypt(input, output, key_bytes);  // 新的并行CTR
   } else {
-    TORCH_CHECK(false, "encrypt/decrypt supports \"ecb\" and \"ctr\" modes, \"", mode, "\" is not supported.");
+     TORCH_CHECK(false, "encrypt/decrypt supports \"ecb\", \"ctr\" and \"custom\" modes, \"", mode, "\" is not supported.");
   }
   return output;
 }

@@ -10,6 +10,7 @@ import random
 import time
 from multiprocessing import Pipe, Lock
 
+from NssMPC.common.network.tensor_pipe import TensorPipeCommunicator
 from NssMPC.common.random.prg import MT19937_PRG
 from NssMPC.config import DEBUG_LEVEL, BIT_LEN, SOCKET_NUM, SOCKET_TYPE, DEVICE
 from NssMPC.crypto.aux_parameter import MatmulTriples, RssMatmulTriples
@@ -106,7 +107,7 @@ class Party3PC(PartyBase):
     communication and coordination with the other two parties.
     """
 
-    def __init__(self, party_id):
+    def __init__(self, party_id, master_ip='localhost',master_port='29500'):
         """
         The constructor initializes the virtual participant and address mapping by calling the constructor of the parent class and initializing the virtual participant and address mapping.
 
@@ -126,9 +127,8 @@ class Party3PC(PartyBase):
         self.prg_0 = None
         self.prg_1 = None
         # 在Party这个抽象类里储存连接映射，Communicator只负责接收地址进行收发
-        self.receiving_address_mapping = {}
-        self.sending_address_mapping = {}
-        self.target_address_mapping = {}
+        self.master_ip = master_ip
+        self.master_port = master_port
 
     def online(self):
         """
@@ -140,36 +140,8 @@ class Party3PC(PartyBase):
         * Pseudo-random generator seeds are generated, auxiliary parameters are loaded, and finally all provider threads, including the threads of the current participant and the two virtual participants, are started to handle subsequent computation tasks
 
         """
-        if self.party_id == 0:
-            from NssMPC.config.configs import SOCKET_P0 as SOCKET_CONFIG
-        elif self.party_id == 1:
-            from NssMPC.config.configs import SOCKET_P1 as SOCKET_CONFIG
-        else:
-            from NssMPC.config.configs import SOCKET_P2 as SOCKET_CONFIG
-
-        self.sending_address_mapping[(self.party_id + 1) % 3] = (
-            SOCKET_CONFIG.TO_NEXT["ADDRESS"], SOCKET_CONFIG.TO_NEXT["PORT"])
-        self.sending_address_mapping[(self.party_id - 1) % 3] = (
-            SOCKET_CONFIG.TO_PREVIOUS["ADDRESS"], SOCKET_CONFIG.TO_PREVIOUS["PORT"])
-
-        self.receiving_address_mapping[(self.party_id + 1) % 3] = (
-            SOCKET_CONFIG.FROM_NEXT["ADDRESS"], SOCKET_CONFIG.FROM_NEXT["PORT"])
-        self.receiving_address_mapping[(self.party_id - 1) % 3] = (
-            SOCKET_CONFIG.FROM_PREVIOUS["ADDRESS"], SOCKET_CONFIG.FROM_PREVIOUS["PORT"])
-
-        self.target_address_mapping[(self.party_id + 1) % 3] = (SOCKET_CONFIG.ADDRESS_NEXT, SOCKET_CONFIG.PORT_NEXT)
-        self.target_address_mapping[(self.party_id - 1) % 3] = (
-            SOCKET_CONFIG.ADDRESS_PREVIOUS, SOCKET_CONFIG.PORT_PREVIOUS)
-        self.communicator.set_max_connections(2)
-        self.set_communicator_address((SOCKET_CONFIG.ADDRESS, SOCKET_CONFIG.PORT))
-
-        self.communicator.init_server()
-
-        self.communicator.connect_to_other(other_address=self.target_address_mapping[(self.party_id + 1) % 3],
-                                           socket_address=self.sending_address_mapping[(self.party_id + 1) % 3])
-        self.communicator.connect_to_other(other_address=self.target_address_mapping[(self.party_id - 1) % 3],
-                                           socket_address=self.sending_address_mapping[(self.party_id - 1) % 3])
-        self.check_all_parties_online()
+        self.communicator = TensorPipeCommunicator(self.party_id, 3, self.master_ip, self.master_port)
+        self.communicator.wait_for_peers(30)
         print("Server", self.party_id, "is now online")
         self.generate_prg_seed()
         self.load_aux_params()
@@ -179,23 +151,6 @@ class Party3PC(PartyBase):
             provider_thread.start()
         for provider_thread in self.virtual_party_with_next.provider_threads.values():
             provider_thread.start()
-
-    def check_all_parties_online(self):
-        """
-        Check if all parties are online
-
-        Before the check begins, the method pauses for 3 seconds. This can be to give the network connection and
-        other participants some time to come online.
-
-        The number of connections required is determined by the value of SOCKET_TYPE:
-            * If *SOCKET_TYPE* is true, the connection number num will be **2** * *SOCKET_NUM*, which means bidirectional connections.
-            * Otherwise, num is set to **2**, which means that only two other parties need to be connected.
-        """
-        time.sleep(3)
-        num = 2 * SOCKET_NUM if SOCKET_TYPE else 2
-        while self.communicator.connected_num() < num:
-            # print(self.communicator.connected_num())
-            pass
 
     def generate_prg_seed(self):
         """
@@ -213,19 +168,6 @@ class Party3PC(PartyBase):
         self.prg_1 = MT19937_PRG()
         self.prg_1.set_seeds(prg_seed_1)
 
-    def set_communicator_address(self, address):
-        """
-        Set the address of the communication device.
-
-        First, a parameter check is performed to ensure that the address passed in is a tuple. Then use the
-        communicator property to call :meth:`~NssMPC.common.network.communicator.Communicator.set_address` to set the communication address and port
-
-        :param address: Communication address of the local device
-        :type address: tuple
-        """
-        assert isinstance(address, tuple)
-        self.communicator.set_address(address[0], address[1])
-
     def send(self, target_id, x):
         """
         Send data **x** to the target address.
@@ -238,7 +180,7 @@ class Party3PC(PartyBase):
         :type x: Any
 
         """
-        self.communicator.send_to_address(self.target_address_mapping[target_id], x)
+        self.communicator.send(target_id, x)
 
     def receive(self, target_id):
         """
@@ -252,11 +194,7 @@ class Party3PC(PartyBase):
         :return: received data
         :rtype: ArithmeticSecretSharing or ReplicatedSecretSharing
         """
-        ret = self.communicator.recv_from_address(self.receiving_address_mapping[target_id])
-        from NssMPC.crypto.primitives.arithmetic_secret_sharing import ArithmeticSecretSharing
-        from NssMPC.crypto.primitives.arithmetic_secret_sharing import ReplicatedSecretSharing
-        if isinstance(ret, (ArithmeticSecretSharing, ReplicatedSecretSharing)):
-            ret.party = self
+        ret = self.communicator.recv(target_id)
         return ret
 
     def close(self):
@@ -272,11 +210,187 @@ class Party3PC(PartyBase):
             Sending the signal **0** does not actually kill the process, but is used to check if the process still exists. This is often used to verify the state of a process.
 
         """
-        self.communicator.close()
+        self.communicator.shutdown()
         # for provider_thread in self.provider_threads.values():
         #     provider_thread.join()
-        import os
-        os.kill(os.getpid(), 0)
+
+# class Party3PC(PartyBase):
+#     """
+#     An implementation specifically for 3-party computation. It achieves secure computation by establishing
+#     communication and coordination with the other two parties.
+#     """
+#
+#     def __init__(self, party_id):
+#         """
+#         The constructor initializes the virtual participant and address mapping by calling the constructor of the parent class and initializing the virtual participant and address mapping.
+#
+#         ATTRIBUTES:
+#             * **virtual_party_with_next** (:class:`VirtualParty2PC`): participant
+#             * **virtual_party_with_previous** (:class:`VirtualParty2PC`): Used to store parameters.
+#             * **prg_0** (:class:`~NssMPC.common.random.prg.MT19937_PRG`): Pseudo-random number generators
+#             * **prg_1** (:class:`~NssMPC.common.random.prg.MT19937_PRG`): Pseudo-random number generators
+#             * **sending_address** (*dict*): The address to send the data.
+#             * **receiving_address** (*dict*): The address to receive the data.
+#             * **target_address** (*dict*): The destination address of the communication. Used to determine the downstream and upstream connections.
+#
+#         """
+#         super().__init__(party_id)
+#         self.virtual_party_with_next = VirtualParty2PC(1, self)
+#         self.virtual_party_with_previous = VirtualParty2PC(0, self)
+#         self.prg_0 = None
+#         self.prg_1 = None
+#         # 在Party这个抽象类里储存连接映射，Communicator只负责接收地址进行收发
+#         self.receiving_address_mapping = {}
+#         self.sending_address_mapping = {}
+#         self.target_address_mapping = {}
+#
+#     def online(self):
+#         """
+#         This method is responsible for setting the online status of the participants.
+#
+#         * First import the corresponding socket configuration *SOCKET_CONFIG* from the configuration file based on party_id.
+#         * Then set the send, receive, and destination address mappings for communication with the next and previous participants, and then set the maximum number of connections to 2. Call :meth:`set_communicator_address` to set the local communication address and port.
+#         * The server is then initialized and its listening address is set to connect to the address of the next and previous participant to establish two-way communication. Call the :meth:`check_all_parties_online` method to confirm that all participants have successfully come online.
+#         * Pseudo-random generator seeds are generated, auxiliary parameters are loaded, and finally all provider threads, including the threads of the current participant and the two virtual participants, are started to handle subsequent computation tasks
+#
+#         """
+#         if self.party_id == 0:
+#             from NssMPC.config.configs import SOCKET_P0 as SOCKET_CONFIG
+#         elif self.party_id == 1:
+#             from NssMPC.config.configs import SOCKET_P1 as SOCKET_CONFIG
+#         else:
+#             from NssMPC.config.configs import SOCKET_P2 as SOCKET_CONFIG
+#
+#         self.sending_address_mapping[(self.party_id + 1) % 3] = (
+#             SOCKET_CONFIG.TO_NEXT["ADDRESS"], SOCKET_CONFIG.TO_NEXT["PORT"])
+#         self.sending_address_mapping[(self.party_id - 1) % 3] = (
+#             SOCKET_CONFIG.TO_PREVIOUS["ADDRESS"], SOCKET_CONFIG.TO_PREVIOUS["PORT"])
+#
+#         self.receiving_address_mapping[(self.party_id + 1) % 3] = (
+#             SOCKET_CONFIG.FROM_NEXT["ADDRESS"], SOCKET_CONFIG.FROM_NEXT["PORT"])
+#         self.receiving_address_mapping[(self.party_id - 1) % 3] = (
+#             SOCKET_CONFIG.FROM_PREVIOUS["ADDRESS"], SOCKET_CONFIG.FROM_PREVIOUS["PORT"])
+#
+#         self.target_address_mapping[(self.party_id + 1) % 3] = (SOCKET_CONFIG.ADDRESS_NEXT, SOCKET_CONFIG.PORT_NEXT)
+#         self.target_address_mapping[(self.party_id - 1) % 3] = (
+#             SOCKET_CONFIG.ADDRESS_PREVIOUS, SOCKET_CONFIG.PORT_PREVIOUS)
+#         self.communicator.set_max_connections(2)
+#         self.set_communicator_address((SOCKET_CONFIG.ADDRESS, SOCKET_CONFIG.PORT))
+#
+#         self.communicator.init_server()
+#
+#         self.communicator.connect_to_other(other_address=self.target_address_mapping[(self.party_id + 1) % 3],
+#                                            socket_address=self.sending_address_mapping[(self.party_id + 1) % 3])
+#         self.communicator.connect_to_other(other_address=self.target_address_mapping[(self.party_id - 1) % 3],
+#                                            socket_address=self.sending_address_mapping[(self.party_id - 1) % 3])
+#         self.check_all_parties_online()
+#         print("Server", self.party_id, "is now online")
+#         self.generate_prg_seed()
+#         self.load_aux_params()
+#         for provider_thread in self.provider_threads.values():
+#             provider_thread.start()
+#         for provider_thread in self.virtual_party_with_previous.provider_threads.values():
+#             provider_thread.start()
+#         for provider_thread in self.virtual_party_with_next.provider_threads.values():
+#             provider_thread.start()
+#
+#     def check_all_parties_online(self):
+#         """
+#         Check if all parties are online
+#
+#         Before the check begins, the method pauses for 3 seconds. This can be to give the network connection and
+#         other participants some time to come online.
+#
+#         The number of connections required is determined by the value of SOCKET_TYPE:
+#             * If *SOCKET_TYPE* is true, the connection number num will be **2** * *SOCKET_NUM*, which means bidirectional connections.
+#             * Otherwise, num is set to **2**, which means that only two other parties need to be connected.
+#         """
+#         time.sleep(3)
+#         num = 2 * SOCKET_NUM if SOCKET_TYPE else 2
+#         while self.communicator.connected_num() < num:
+#             # print(self.communicator.connected_num())
+#             pass
+#
+#     def generate_prg_seed(self):
+#         """
+#         Generate two pseudorandom number generator (PRG) seeds.
+#
+#         ``prg_seed_0`` is a random seed generated by the current party and sends ``prg_seed_0`` to the previous participant.
+#         It then receives the seed ``prg_seed_1`` from the next participant. Using the PRG of the Mersenne Twister
+#         algorithm, set the seeds ``prg_seed_0`` and ``prg_seed_1`` using the :meth:`~NssMPC.common.random.prg.MT19937_PRG.set_seeds` method.
+#         """
+#         prg_seed_0 = random.randint(0, 2 ** BIT_LEN)
+#         self.send((self.party_id - 1) % 3, prg_seed_0)
+#         prg_seed_1 = self.receive((self.party_id + 1) % 3)
+#         self.prg_0 = MT19937_PRG()
+#         self.prg_0.set_seeds(prg_seed_0)
+#         self.prg_1 = MT19937_PRG()
+#         self.prg_1.set_seeds(prg_seed_1)
+#
+#     def set_communicator_address(self, address):
+#         """
+#         Set the address of the communication device.
+#
+#         First, a parameter check is performed to ensure that the address passed in is a tuple. Then use the
+#         communicator property to call :meth:`~NssMPC.common.network.communicator.Communicator.set_address` to set the communication address and port
+#
+#         :param address: Communication address of the local device
+#         :type address: tuple
+#         """
+#         assert isinstance(address, tuple)
+#         self.communicator.set_address(address[0], address[1])
+#
+#     def send(self, target_id, x):
+#         """
+#         Send data **x** to the target address.
+#
+#         Use the :meth:`~NssMPC.common.network.communicator.Communicator.send_to_address` method of ``self.communicator`` to send data to the address specified by ``target_address_mapping[target_id]``.
+#
+#         :param target_id: The index value of the target address in the dictionary
+#         :type target_id: int
+#         :param x: Information that needs to be sent.
+#         :type x: Any
+#
+#         """
+#         self.communicator.send_to_address(self.target_address_mapping[target_id], x)
+#
+#     def receive(self, target_id):
+#         """
+#         Receive data from a specified address.
+#
+#         Call the :meth:`~NssMPC.common.network.communicator.Communicator.recv_from_address` method of ``self.communicator`` to receive data from ``self.receiving_address_mapping[target_id]``.
+#         Check whether the received data is an instance of ArithmeticSecretSharing or ReplicatedSecretSharing. If it is, set the party attribute of the current object to it.
+#
+#         :param target_id: The index value of the target address in the dictionary
+#         :type target_id: int
+#         :return: received data
+#         :rtype: ArithmeticSecretSharing or ReplicatedSecretSharing
+#         """
+#         ret = self.communicator.recv_from_address(self.receiving_address_mapping[target_id])
+#         from NssMPC.crypto.primitives.arithmetic_secret_sharing import ArithmeticSecretSharing
+#         from NssMPC.crypto.primitives.arithmetic_secret_sharing import ReplicatedSecretSharing
+#         if isinstance(ret, (ArithmeticSecretSharing, ReplicatedSecretSharing)):
+#             ret.party = self
+#         return ret
+#
+#     def close(self):
+#         """
+#         Close the TCP connection and clean up the resources associated with it.
+#
+#         The :meth:`~NssMPC.common.network.communicator.Communicator.close` method is called to close the TCP connection with the other
+#         participant.
+#
+#         Then send signal **0** to the current process using the ``os.kill`` function.
+#
+#         .. note::
+#             Sending the signal **0** does not actually kill the process, but is used to check if the process still exists. This is often used to verify the state of a process.
+#
+#         """
+#         self.communicator.close()
+#         # for provider_thread in self.provider_threads.values():
+#         #     provider_thread.join()
+#         import os
+#         os.kill(os.getpid(), 0)
 
 
 class VirtualParty2PC(PartyBase):

@@ -6,41 +6,141 @@
 This module defines classes and methods related to parameters used in the NssMPC framework.
 It provides functionality to generate, save, load, and manipulate parameters using pickle serialization.
 """
-
+import inspect
 import os
 import pickle
 from copy import deepcopy
+from typing import Tuple, Type, Dict, Any
 
 from NssMPC.config import param_path
 from NssMPC.config.runtime import ParameterRegistry
 
+class ParamList(list):
+    def __init__(self, *args):
+        """初始化 ParamList 实例"""
+        if len(args) == 1 and isinstance(args[0], (list, tuple)):
+            super().__init__(self._convert_item(args[0]))
+        else:
+            super().__init__(self._convert_item(args))
+
+    def _convert_item(self, item):
+        """递归转换嵌套结构"""
+        if isinstance(item, (list, tuple)):
+            return [self._convert_item(x) for x in item]
+        elif isinstance(item, dict):
+            return ParamDict(item)
+        return item
+
+    # def __setitem__(self, index, value):
+    #     super().__setitem__(index, self._convert_item(value))
+
+    def append(self, value):
+        super().append(self._convert_item(value))
+
+    def extend(self, values):
+        super().extend(self._convert_item(values))
+
+    def to(self, device):
+        result = ParamList()
+        for v in self:
+            if hasattr(v, 'to') and callable(getattr(v, 'to')):
+                result.append(v.to(device))
+            else:
+                result.append(v)
+        return result
+
+class ParamDict(dict):
+    def __init__(self, *args, **kwargs):
+        """
+        初始化 ParamDict 实例
+        支持 ParamDict({'a': 1, 'b': 2}) 和 ParamDict(a=1, b=2) 两种方式
+        """
+        super().__init__()
+        if args:
+            if len(args) > 1:
+                raise TypeError("ParamDict expected at most 1 argument, got {}".format(len(args)))
+            if isinstance(args[0], dict):
+                for k, v in args[0].items():
+                    self[k] = self._convert_value(v)
+            else:
+                raise TypeError("ParamDict argument must be a dictionary")
+
+        # 处理关键字参数
+        for k, v in kwargs.items():
+            self[k] = self._convert_value(v)
+
+    def _convert_value(self, value):
+        """递归转换嵌套的列表、元组和字典为 ParamList 和 ParamDict"""
+        if isinstance(value, (list, tuple)):
+            return ParamList(value)
+        elif isinstance(value, dict):
+            return ParamDict(value)
+        else:
+            return value
+
+    # def __setitem__(self, key, value):
+    #     """设置项，自动转换嵌套结构"""
+    #     super().__setitem__(key, self._convert_value(value))
+
+    def update(self, other=None, **kwargs):
+        """更新字典，自动转换嵌套结构"""
+        if other is not None:
+            if hasattr(other, 'keys'):
+                for key in other:
+                    self[key] = other[key]
+            else:
+                for key, value in other:
+                    self[key] = value
+        for key, value in kwargs.items():
+            self[key] = value
+
+    def to(self, device):
+        """将所有支持 .to() 方法的元素转移到指定设备"""
+        result = ParamDict()
+        for k, v in self.items():
+            if hasattr(v, 'to') and callable(getattr(v, 'to')):
+                result[k] = v.to(device)
+            elif isinstance(v, (ParamList, ParamDict)):
+                result[k] = v.to(device)
+            else:
+                result[k] = v
+        return result
+
+    def copy(self):
+        """创建深拷贝"""
+        return ParamDict(super().copy())
+
 
 class ParameterMeta(type):
-    """
-    A metaclass that registers the parameter class in the `ParameterRegistry`.
 
-    This metaclass ensures that any class using `ParameterMeta` as its metaclass
-    is automatically registered in the `ParameterRegistry`.
+    def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Dict[str, Any]) -> Type:
+        # 转换类属性
+        for attr_name, attr_value in list(attrs.items()):
+            if not attr_name.startswith('__') and not inspect.ismethod(attr_value) and not inspect.isfunction(attr_value):
+                if type(attr_value) in (list, tuple):
+                    attrs[attr_name] = ParamList(attr_value)
+                elif type(attr_value) is dict:
+                    attrs[attr_name] = ParamDict(attr_value)
 
-    We mainly use this class to ensure that all classes inherit from Parameter are registered in ParameterRegistry for easy management.
-    """
-
-    def __new__(cls, name, bases, dct):
-        """
-        Creates a new class and registers it in the `ParameterRegistry`.
-
-        :param name: The name of the new class.
-        :type name: str
-        :param bases: The base classes of the new class.
-        :type bases: tuple
-        :param dct: The class attributes and methods.
-        :type dct: dict
-        :return: The newly created class.
-        :rtype: type
-        """
-        ret = super().__new__(cls, name, bases, dct)
+        ret = super().__new__(cls, name, bases, attrs)
         ParameterRegistry.register(ret)
         return ret
+
+    def __call__(cls, *args, **kwargs) -> Any:
+        instance = super().__call__(*args, **kwargs)
+
+        for attr_name in dir(instance):
+            if not attr_name.startswith('__'):
+                try:
+                    attr_value = getattr(instance, attr_name)
+                    if type(attr_value) in (list, tuple):
+                        setattr(instance, attr_name, ParamList(attr_value))
+                    elif type(attr_value) is dict:
+                        setattr(instance, attr_name, ParamDict(attr_value))
+                except (AttributeError, TypeError):
+                    continue
+
+        return instance
 
 
 @ParameterRegistry.ignore()
@@ -149,7 +249,7 @@ class Parameter(metaclass=ParameterMeta):
         :return: A dictionary representation of the parameter instance.
         :rtype: dict
         """
-        dic = {}
+        dic = ParamDict()
         for key, value in self.__dict__.items():
             if hasattr(value, 'to_dic'):
                 dic[key] = value.to_dic()

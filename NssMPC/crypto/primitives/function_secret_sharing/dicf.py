@@ -195,7 +195,7 @@ class SigmaDICF:
         :rtype: RingTensor
         """
         shape = x_shift.shape
-        x_shift = x_shift.view(-1, 1)
+        x_shift = x_shift.contiguous().view(-1, 1)
         y = x_shift % (2 ** (x_shift.bit_len - 1) - 1)
         y = y + 1
         out = prefix_parity_query(y, key.dpf_key, party_id)

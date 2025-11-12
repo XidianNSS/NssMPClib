@@ -344,20 +344,20 @@ bool supports_cuda() {
 #endif
 }
 
-class AES_PRG{
+class AES_PRG : public torch::CustomClassHolder {
     private:
       Tensor aes_key;
       Tensor prg_seeds;
-      int BIT_LEN;
-      int each_gen_num;
+      int64_t BIT_LEN;
+      int64_t each_gen_num;
     public:
       int64_t parallel_num = 0;
       torch::Device device = torch::Device(torch::kCPU);
 
       AES_PRG();
       void set_seeds(Tensor seeds);
-      torch::Tensor bit_random(int bits);
-      torch::Tensor random(int length);
+      torch::Tensor bit_random(int64_t bits);
+      torch::Tensor random(int64_t length);
 };
 
 AES_PRG::AES_PRG(){};
@@ -372,19 +372,22 @@ void AES_PRG::set_seeds(Tensor seeds){
     aes_key = tensor({1, 2}, seeds.options().dtype(torch::kInt64));
 }
 
-torch::Tensor AES_PRG::bit_random(int bits)
+torch::Tensor AES_PRG::bit_random(int64_t bits)
 {
   std::vector<int64_t> seed_sizes = prg_seeds.sizes().vec();
-  const int desired_num = std::ceil(bits / float(BIT_LEN));
-  const int desired_128_block = std::ceil(bits / 128.0);
+  const int64_t desired_num = (bits + BIT_LEN - 1) / BIT_LEN;
+  const int64_t desired_128_block = (bits + 127) / 128;
   Tensor out_tensor = empty({parallel_num, each_gen_num * desired_128_block}, prg_seeds.options());
-  for(int i = 0; i < desired_num; i += each_gen_num, aes_key += 1)
-      encrypt_pybind(prg_seeds, out_tensor.index({indexing::Slice(), indexing::Slice(i, i + each_gen_num)}), aes_key, "aes128", "ecb");
+  std::vector<int64_t> repeat_pattern(seed_sizes.size(), 1);
+  repeat_pattern.back() = desired_128_block;
+  Tensor expanded_seeds = prg_seeds.repeat(repeat_pattern);
+  encrypt_pybind(expanded_seeds, out_tensor, aes_key, "aes128", "custom");
+  aes_key += 1;
   seed_sizes.back() = desired_num;
-  return out_tensor.index({indexing::Slice(), indexing::Slice(indexing::None,desired_num)}).view(seed_sizes);
+  return out_tensor.slice(-1, 0, desired_num).view(seed_sizes);
 }
 
-torch::Tensor AES_PRG::random(int length)
+torch::Tensor AES_PRG::random(int64_t length)
 {
     return bit_random(length * BIT_LEN);
 }
@@ -416,18 +419,28 @@ TORCH_LIBRARY_IMPL(aten, CustomRNGKeyId, m) {
   m.impl("randperm.generator_out",   randperm_generator_out);
 }
 
+TORCH_LIBRARY(csprng_aes, m) {
+    m.class_<AES_PRG>("AES_PRG")
+        .def(torch::init<>())
+        .def("set_seeds", &AES_PRG::set_seeds)
+        .def("bit_random", &AES_PRG::bit_random)
+        .def("random", &AES_PRG::random)
+        .def_readwrite("parallel_num", &AES_PRG::parallel_num)
+        .def_readwrite("device", &AES_PRG::device);
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("supports_cuda", &supports_cuda);
-  m.def("create_random_device_generator", &create_random_device_generator, py::arg("token") = nullptr);
-  m.def("create_mt19937_generator", &create_mt19937_generator, py::arg("seed") = nullptr);
-  m.def("encrypt", &encrypt_pybind);
-  m.def("decrypt", &decrypt_pybind);
-  py::class_<AES_PRG>(m, "PRG")
-  .def_readonly("device", &AES_PRG::device)
-  .def_readonly("parallel_num", &AES_PRG::parallel_num)
-  .def(py::init<>())
-  .def("set_seeds", &AES_PRG::set_seeds, py::arg("seeds"))
-  .def("bit_random", &AES_PRG::bit_random, py::arg("bits"))
-  .def("random", &AES_PRG::random, py::arg("length"));
+    m.def("supports_cuda", &supports_cuda);
+    m.def("create_random_device_generator", &create_random_device_generator, py::arg("token") = nullptr);
+    m.def("create_mt19937_generator", &create_mt19937_generator, py::arg("seed") = nullptr);
+    m.def("encrypt", &encrypt_pybind);
+    m.def("decrypt", &decrypt_pybind);
+    py::class_<AES_PRG, std::shared_ptr<AES_PRG>>(m, "PRG")
+       .def(py::init<>())
+       .def("set_seeds", &AES_PRG::set_seeds)
+       .def("bit_random", &AES_PRG::bit_random)
+       .def("random", &AES_PRG::random)
+       .def_readonly("device", &AES_PRG::device)
+       .def_readonly("parallel_num", &AES_PRG::parallel_num);
 }
 

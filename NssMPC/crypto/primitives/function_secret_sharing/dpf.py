@@ -5,6 +5,11 @@ The process of generating and evaluating distributed point function keys involve
 The implementation is based on the work of E. Boyle e.t.c. Function Secret Sharing: Improvements and Extensions.2016
 For reference, see the `paper <https://dl.acm.org/doi/10.1145/2976749.2978429>`_.
 """
+from typing import List
+
+import torch
+from torch import logical_not
+
 #  This file is part of the NssMPClib project.
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
@@ -13,7 +18,7 @@ from NssMPC.common.random.prg import PRG
 from NssMPC.common.ring import RingTensor
 from NssMPC.common.utils import convert_tensor
 from NssMPC.config.configs import LAMBDA, DEVICE, PRG_TYPE
-from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.cw import CW
+from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.cw import CW, gen_dpf_cw
 from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.dpf_key import DPFKey
 
 
@@ -69,7 +74,7 @@ class DPF:
         """
         x = x.clone()
 
-        prg = PRG(prg_type, DEVICE)
+        prg = torch.classes.csprng_aes.AES_PRG()
 
         t_last = party_id
 
@@ -82,7 +87,7 @@ class DPF:
             t_cw_l = cw.t_cw_l
             t_cw_r = cw.t_cw_r
 
-            s_l, t_l, s_r, t_r = CW.gen_dpf_cw(prg, s_last, LAMBDA)
+            s_l, t_l, s_r, t_r = gen_dpf_cw(prg, s_last, LAMBDA)
 
             s1_l = s_l ^ (s_cw * t_last)
             t1_l = t_l ^ (t_cw_l * t_last)
@@ -98,72 +103,122 @@ class DPF:
 
         return RingTensor(dpf_result, x.dtype, x.device)
 
+# def prefix_parity_query(x: RingTensor, keys, party_id, prg_type=PRG_TYPE):
+#     """
+#     Return the prefix parity query of the input *x*, thus improve the efficiency of the evaluation process.
+#
+#     By transforming the distributed point function evaluation(EVAL) process
+#     to computing the prefix parity sum of a section (Prefix Parity Sum), we can improve the computational efficiency.
+#     So based on the input *x*, the participant locally computes the parity of the point in the Parity-segment tree,
+#     and the result will be 0 if **x < alpha**, and 1 **otherwise**.
+#
+#     .. important::
+#         We put this method in ``dpf`` document because the key used in this method is DPFKey, but actually it
+#         implements the functionality of DCF.
+#
+#     .. note::
+#         The implementation is based on the work of
+#         **Storrier, K., Vadapalli, A., Lyons, A., & Henry, R. (2023). Grotto: Screaming Fast (2 + 1)-PC for Z2ⁿ via (2, 2)-DPFs**.
+#         For reference, see the `paper <https://eprint.iacr.org/2023/108>`_.
+#
+#     :param x: The input RingTensor on which the prefix parity query is performed.
+#     :type x: RingTensor
+#     :param keys: The secret sharing keys required for prefix parity query.
+#     :type keys: DPFKey
+#     :param party_id: The party ID (0 or 1), identifying which party is performing the evaluation.
+#     :type party_id: int
+#     :param prg_type: The type of pseudorandom generator (PRG) used during evaluation, defaults to **PRG_TYPE**.
+#     :type prg_type: str, optional
+#     :return: The result of the prefix parity query as a RingTensor.
+#     :rtype: RingTensor
+#
+#     .. important::
+#         The results of this method are different from the usual ones where 1 is obtained when the value is less than *alpha*,
+#         instead, 1 is obtained only when the value is equal to or greater than *alpha*.
+#
+#     """
+#     prg = torch.classes.csprng_aes.AES_PRG()
+#
+#     d = 0
+#     psg_b = 0
+#     t_last = party_id
+#
+#     s_last = keys.s
+#     for i in range(x.bit_len):
+#         cw = keys.cw_list[i]
+#
+#         s_cw = cw.s_cw
+#         t_cw_l = cw.t_cw_l
+#         t_cw_r = cw.t_cw_r
+#
+#         s_l, t_l, s_r, t_r = gen_dpf_cw(prg, s_last, LAMBDA)
+#
+#         s1_l = s_l ^ (s_cw * t_last)
+#         t1_l = t_l ^ (t_cw_l * t_last)
+#         s1_r = s_r ^ (s_cw * t_last)
+#         t1_r = t_r ^ (t_cw_r * t_last)
+#
+#         x_shift_bit = ((x.tensor >> (x.bit_len - 1 - i)) & 1)
+#
+#         cond = (d != x_shift_bit)
+#
+#         d = torch.where(cond, x_shift_bit, d)
+#         psg_b = torch.where(cond, psg_b ^ t_last, psg_b)
+#
+#         s_last = torch.where(x_shift_bit.to(torch.bool), s1_r, s1_l)
+#         t_last = torch.where(x_shift_bit.to(torch.bool), t1_r, t1_l)
+#
+#     psg_b = (psg_b ^ t_last) * d + psg_b * (1 - d)
+#
+#     return RingTensor(psg_b, x.dtype, x.device)
+
 
 def prefix_parity_query(x: RingTensor, keys, party_id, prg_type=PRG_TYPE):
-    """
-    Return the prefix parity query of the input *x*, thus improve the efficiency of the evaluation process.
+    s=keys.s
+    cw_list_s=[cw.s_cw for cw in keys.cw_list]
+    cw_list_tl=[cw.t_cw_l for cw in keys.cw_list]
+    cw_list_tr=[cw.t_cw_r for cw in keys.cw_list]
+    return RingTensor(_prefix_parity_query(x.tensor, s,cw_list_s, cw_list_tl, cw_list_tr , party_id, x.bit_len, LAMBDA), x.dtype, x.device)
 
-    By transforming the distributed point function evaluation(EVAL) process
-    to computing the prefix parity sum of a section (Prefix Parity Sum), we can improve the computational efficiency.
-    So based on the input *x*, the participant locally computes the parity of the point in the Parity-segment tree,
-    and the result will be 0 if **x < alpha**, and 1 **otherwise**.
+# @torch.jit.script
+def _prefix_parity_query(x,
+                         s,
+                         cw_list_s:List[torch.Tensor],
+                         cw_list_tl:List[torch.Tensor],
+                         cw_list_tr:List[torch.Tensor],
+                         party_id:int,
+                         bit_len:int,
+                         lmd:int):
+    prg = torch.classes.csprng_aes.AES_PRG()
 
-    .. important::
-        We put this method in ``dpf`` document because the key used in this method is DPFKey, but actually it
-        implements the functionality of DCF.
+    d = torch.zeros_like(x)
+    psg_b = torch.zeros_like(x)
+    t_last = torch.full_like(x,party_id)
 
-    .. note::
-        The implementation is based on the work of
-        **Storrier, K., Vadapalli, A., Lyons, A., & Henry, R. (2023). Grotto: Screaming Fast (2 + 1)-PC for Z2ⁿ via (2, 2)-DPFs**.
-        For reference, see the `paper <https://eprint.iacr.org/2023/108>`_.
+    s_last = s
+    for i in range(bit_len):
 
-    :param x: The input RingTensor on which the prefix parity query is performed.
-    :type x: RingTensor
-    :param keys: The secret sharing keys required for prefix parity query.
-    :type keys: DPFKey
-    :param party_id: The party ID (0 or 1), identifying which party is performing the evaluation.
-    :type party_id: int
-    :param prg_type: The type of pseudorandom generator (PRG) used during evaluation, defaults to **PRG_TYPE**.
-    :type prg_type: str, optional
-    :return: The result of the prefix parity query as a RingTensor.
-    :rtype: RingTensor
+        s_cw = cw_list_s[i]
+        t_cw_l = cw_list_tl[i]
+        t_cw_r = cw_list_tr[i]
 
-    .. important::
-        The results of this method are different from the usual ones where 1 is obtained when the value is less than *alpha*,
-        instead, 1 is obtained only when the value is equal to or greater than *alpha*.
-
-    """
-    prg = PRG(prg_type, DEVICE)
-
-    d = 0
-    psg_b = 0
-    t_last = party_id
-
-    s_last = keys.s
-    for i in range(x.bit_len):
-        cw = keys.cw_list[i]
-
-        s_cw = cw.s_cw
-        t_cw_l = cw.t_cw_l
-        t_cw_r = cw.t_cw_r
-
-        s_l, t_l, s_r, t_r = CW.gen_dpf_cw(prg, s_last, LAMBDA)
+        s_l, t_l, s_r, t_r = gen_dpf_cw(prg, s_last, lmd)
 
         s1_l = s_l ^ (s_cw * t_last)
         t1_l = t_l ^ (t_cw_l * t_last)
         s1_r = s_r ^ (s_cw * t_last)
         t1_r = t_r ^ (t_cw_r * t_last)
 
-        x_shift_bit = x.get_tensor_bit(x.bit_len - 1 - i)
+        x_shift_bit = ((x >> (bit_len - 1 - i)) & 1)
 
         cond = (d != x_shift_bit)
-        d = x_shift_bit * cond + d * ~cond
 
-        psg_b = (psg_b ^ t_last) * cond + psg_b * ~cond
+        d = torch.where(cond, x_shift_bit, d)
+        psg_b = torch.where(cond, psg_b ^ t_last, psg_b)
 
-        s_last = s1_r * x_shift_bit + s1_l * (1 - x_shift_bit)
-        t_last = t1_r * x_shift_bit + t1_l * (1 - x_shift_bit)
+        s_last = torch.where(x_shift_bit.to(torch.bool), s1_r, s1_l)
+        t_last = torch.where(x_shift_bit.to(torch.bool), t1_r, t1_l)
 
     psg_b = (psg_b ^ t_last) * d + psg_b * (1 - d)
 
-    return RingTensor(psg_b, x.dtype, x.device)
+    return psg_b

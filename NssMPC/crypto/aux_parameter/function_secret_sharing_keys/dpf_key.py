@@ -16,7 +16,7 @@ from NssMPC.common.random import PRG
 from NssMPC.common.utils import convert_tensor
 from NssMPC.config import HALF_RING, DEVICE, LAMBDA, BIT_LEN, data_type, PRG_TYPE
 from NssMPC.crypto.aux_parameter import Parameter
-from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.cw import CWList, CW
+from NssMPC.crypto.aux_parameter.function_secret_sharing_keys.cw import CWList, CW, gen_dpf_cw
 
 
 class DPFKey(Parameter):
@@ -73,11 +73,11 @@ class DPFKey(Parameter):
         seed_1 = torch.randint(-HALF_RING, HALF_RING - 1, [num_of_keys, LAMBDA // BIT_LEN], dtype=data_type,
                                device=DEVICE)
 
-        prg = PRG(PRG_TYPE, device=DEVICE)
+        prg = torch.classes.csprng_aes.AES_PRG()
         prg.set_seeds(seed_0)
-        s_0_0 = prg.bit_random_tensor(LAMBDA)
+        s_0_0 = prg.bit_random(LAMBDA)
         prg.set_seeds(seed_1)
-        s_0_1 = prg.bit_random_tensor(LAMBDA)
+        s_0_1 = prg.bit_random(LAMBDA)
 
         k0 = DPFKey()
         k1 = DPFKey()
@@ -92,8 +92,8 @@ class DPFKey(Parameter):
         t_last_1 = 1
 
         for i in range(alpha.bit_len):
-            s_l_0, t_l_0, s_r_0, t_r_0 = CW.gen_dpf_cw(prg, s_last_0, LAMBDA)
-            s_l_1, t_l_1, s_r_1, t_r_1 = CW.gen_dpf_cw(prg, s_last_1, LAMBDA)
+            s_l_0, t_l_0, s_r_0, t_r_0 = gen_dpf_cw(prg, s_last_0, LAMBDA)
+            s_l_1, t_l_1, s_r_1, t_r_1 = gen_dpf_cw(prg, s_last_1, LAMBDA)
 
             cond = (alpha.get_tensor_bit(alpha.bit_len - 1 - i) == 0).view(-1, 1)
 
