@@ -8,7 +8,7 @@ This document defines different pooling methods: maximum pooling, average poolin
 import math
 
 import torch
-from NssMPC.common.ring.ring_tensor import RingTensor
+from NssMPC.infra.tensor import RingTensor
 
 from NssMPC.application.neural_network.functional.functional import img2col_for_pool
 
@@ -17,20 +17,23 @@ from NssMPC.config import DEVICE, data_type
 
 class SecMaxPool2d(torch.nn.Module):
     """
-    Max Pooling.
+    Max Pooling Layer.
 
-    * The implementation of this class is mainly based on the `paper Sonic <https://maggichk.github.io/papers/sonic.pdf>`_.
+    The implementation of this class is mainly based on the paper Sonic.
     """
 
     def __init__(self, kernel_size, stride, padding=(0, 0), device=DEVICE):
         """
-        Example Initialize SecMaxPool2d.
+        Initializes SecMaxPool2d.
 
-        ATTRIBUTES:
-            * **kernel_size** (*int*): Shape of the convolution kernel
-            * **stride** (*int*): Convolution stride
-            * **padding** (*int*): Input boundary padding
-            * **device** (*str*): The device where tensors are stored
+        Args:
+            kernel_size (int or tuple): Shape of the convolution kernel.
+            stride (int or tuple): Convolution stride.
+            padding (int or tuple, optional): Input boundary padding.
+            device (str, optional): The device where tensors are stored.
+
+        Examples:
+            >>> pool = SecMaxPool2d(kernel_size=2, stride=2)
         """
         super(SecMaxPool2d, self).__init__()
         if type(kernel_size) in (tuple, list):
@@ -49,12 +52,16 @@ class SecMaxPool2d(torch.nn.Module):
 
     def get_out_shape(self, x):
         """
-        After obtaining the number of batches and channels from the input ``x``, the output height ``out_h`` and output width ``out_w`` are calculated using the integer up function ceil.
+        Calculates the output shape based on input shape.
 
-        :param x: Input tensor
-        :type x: RingTensor
-        :return: The output tensor after the pooling operation.
-        :rtype: tuple
+        Args:
+            x (RingTensor): Input tensor.
+
+        Returns:
+            tuple: The output tensor shape (n, img_c, out_h, out_w).
+
+        Examples:
+            >>> shape = pool.get_out_shape(input_tensor)
         """
         n, img_c, img_h, img_w = x.shape
         out_h = math.ceil((img_h - self.kernel_shape + 2 * self.padding) // self.stride) + 1
@@ -64,17 +71,16 @@ class SecMaxPool2d(torch.nn.Module):
 
     def forward(self, x):
         """
-        After getting the size of the pooling window, populate ``x`` with the function
-        :func:`~NssMPC.common.ring.ring_tensor.RingTensor.pad`. Then call
-        :func:`~NssMPC.application.neural_network.functional.functional.img2col_for_pool` to tensor transform ``x``
-        into a column form suitable for pooling. Finally, maximum pooling is performed on the last dimension to
-        obtain the maximum value of each window.
+        Performs max pooling on the input.
 
-        :param x: Input tensor
-        :type x: RingTensor
-        :return: Tensor after maximum pooling treatment
-        :rtype: RingTensor
+        Args:
+            x (RingTensor): Input tensor.
 
+        Returns:
+            RingTensor: Tensor after maximum pooling treatment.
+
+        Examples:
+            >>> output = pool(input_tensor)
         """
         k_size = self.kernel_shape
         out_shape = self.get_out_shape(x)
@@ -90,19 +96,21 @@ class SecMaxPool2d(torch.nn.Module):
 
 class SecAvgPool2d(torch.nn.Module):
     """
-    Average Pooling.
+    Average Pooling Layer.
     """
 
     def __init__(self, kernel_size, stride=None, padding=(0, 0), device=DEVICE):
         """
-        Example Initialize SecAvgPool2d.
+        Initializes SecAvgPool2d.
 
-        ATTRIBUTES:
-            * **kernel_size** (*int*): Shape of the convolution kernel
-            * **stride** (*int*): Convolution stride
-            * **padding** (*int*): Input boundary padding
-            * **device** (*str*): The device where tensors are stored
+        Args:
+            kernel_size (int or tuple): Shape of the convolution kernel.
+            stride (int or tuple, optional): Convolution stride.
+            padding (int or tuple, optional): Input boundary padding.
+            device (str, optional): The device where tensors are stored.
 
+        Examples:
+            >>> pool = SecAvgPool2d(kernel_size=2, stride=2)
         """
         super(SecAvgPool2d, self).__init__()
 
@@ -124,12 +132,16 @@ class SecAvgPool2d(torch.nn.Module):
 
     def get_out_shape(self, x):
         """
-        After obtaining the number of batches ``x`` and channels ``img_c`` from the input ``x``, the output height ``out_h`` and output width ``out_w`` are calculated using the integer up function ceil.
+        Calculates the output shape based on input shape.
 
-        :param x: Input tensor
-        :type x: RingTensor
-        :return: The output tensor after the pooling operation.
-        :rtype: tuple
+        Args:
+            x (RingTensor): Input tensor.
+
+        Returns:
+            tuple: The output tensor shape (n, img_c, out_h, out_w).
+
+        Examples:
+            >>> shape = pool.get_out_shape(input_tensor)
         """
         n, img_c, img_h, img_w = x.shape
         out_h = math.ceil((img_h - self.kernel_size + 2 * self.padding) // self.stride) + 1
@@ -138,13 +150,16 @@ class SecAvgPool2d(torch.nn.Module):
 
     def forward(self, x):
         """
-        After the input is edge-filled, a weight tensor is created and the average of each window is obtained using
-        matrix multiplication x @ weight.
+        Performs average pooling on the input.
 
-        :param x: Input tensor
-        :type x: RingTensor
-        :return: The tensor after average pooling
-        :rtype: RingTensor
+        Args:
+            x (RingTensor): Input tensor.
+
+        Returns:
+            RingTensor: The tensor after average pooling.
+
+        Examples:
+            >>> output = pool(input_tensor)
         """
         padding = self.padding
         x = x.pad((padding, padding, padding, padding), mode="constant", value=0)
@@ -164,35 +179,38 @@ class SecAvgPool2d(torch.nn.Module):
 
 class SecAdaptiveAvgPool2d(torch.nn.Module):
     """
-    Adaptive Average Pooling.
+    Adaptive Average Pooling Layer.
 
-    .. note::
-        The difference between **SecAdaptiveAvgPool2d** and **SecAvgPool2d** is that:
-            * **SecAvgPool2d** is generally used for fixed-size inputs, and the output size is also dependent on the size of the input feature map. Moreover, the size of the output depends on the input size, convolution kernel size and stride length, and there is no guarantee that the shape of the output is expected by the user.
-
-            * **SecAdaptiveAvgPool2d** automatically calculates the desired convolution kernel size and stride length to ensure that the output reaches the specified shape. And the size of the output is user-defined, regardless of the size of the input feature map, it can always be adjusted to the specified output size.
+    Note:
+        SecAdaptiveAvgPool2d automatically calculates the desired convolution kernel size and stride length
+        to ensure that the output reaches the specified shape.
     """
 
     def __init__(self, output_size):
         """
-        Example Initialize SecAdaptiveAvgPool2d.
+        Initializes SecAdaptiveAvgPool2d.
 
-        ATTRIBUTES:
-            * **output_size** (*int*): Shape of the output
+        Args:
+            output_size (int or tuple): Shape of the output.
+
+        Examples:
+            >>> pool = SecAdaptiveAvgPool2d(output_size=(5, 5))
         """
         super(SecAdaptiveAvgPool2d, self).__init__()
         self.output_size = output_size
 
     def forward(self, x):
         """
-        After obtaining the shape of the input/output tensor, use the ``torch.floor`` function for operation to round
-        down to obtain the step length, calculate the pool window size, create the SecAvgPool2d instance and pass in
-        the input x for adaptive average pooling operation.
+        Performs adaptive average pooling on the input.
 
-        :param x: Input tensor
-        :type x: RingTensor
-        :return: The tensor after adaptive average pooling
-        :rtype: RingTensor
+        Args:
+            x (RingTensor): Input tensor.
+
+        Returns:
+            RingTensor: The tensor after adaptive average pooling.
+
+        Examples:
+            >>> output = pool(input_tensor)
         """
         # Transform AdaptiveAvgPool to AvgPool
         input_shape = torch.tensor(x.shape[2:])

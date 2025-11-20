@@ -1,7 +1,6 @@
 #  This file is part of the NssMPClib project.
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
-
 import os
 from importlib import resources
 
@@ -20,4 +19,4 @@ if not os.path.exists(__data_path + '/config.json'):
     except FileNotFoundError:
         print("未找到 default_config.json.  检查 NssMPC 包是否完整.")
 
-from NssMPC.config.configs import *
+from .configs import *

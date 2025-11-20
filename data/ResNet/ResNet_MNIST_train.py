@@ -9,7 +9,7 @@ import torchvision
 import torchvision.transforms as transforms
 
 from NssMPC.config import NN_path
-from data.ResNet.ResNet import resnet50
+from data.ResNet.ResNet import resnet34
 
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -17,16 +17,16 @@ transform = transforms.Compose([
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-train_set = torchvision.datasets.MNIST(root=NN_path, train=True, download=True,
+train_set = torchvision.datasets.CIFAR10(root=NN_path, train=True, download=True,
                                        transform=transform)
 
 train_loader = torch.utils.data.DataLoader(train_set, batch_size=10, shuffle=True)
 
-test_set = torchvision.datasets.MNIST(root=NN_path, train=False, download=True,
+test_set = torchvision.datasets.CIFAR10(root=NN_path, train=False, download=True,
                                       transform=transform)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=1000, shuffle=False)
 
-net = resnet50()
+net = resnet34()
 
 criterion = nn.CrossEntropyLoss()
 
@@ -43,7 +43,7 @@ for epoch in range(num_epochs):
     batch_size = 10
 
     for i, data in enumerate(train_loader):
-        print(i)
+        # print(i)
         inputs, labels = data
         inputs, labels = inputs.to(device), labels.to(device)
 
@@ -60,9 +60,9 @@ print("Finished Training")
 net.eval()
 if not os.path.exists(NN_path):
     os.makedirs(NN_path)
-torch.save(net.state_dict(), NN_path + '/ResNet50_MNIST.pkl')
+torch.save(net.state_dict(), NN_path + '/ResNet34_CIFAR10.pkl')
 
-net.load_state_dict(torch.load(NN_path + '/ResNet50_MNIST.pkl'))
+net.load_state_dict(torch.load(NN_path + '/ResNet34_CIFAR10.pkl'))
 start_time = time.time()
 
 with torch.no_grad():
@@ -80,7 +80,7 @@ with torch.no_grad():
 
         total_total += total
         total_correct += correct
-        print('Accuracy of the network on the 100 test images:{}%'.format(100 * correct / total))
+        print('Accuracy of the communication on the 100 test images:{}%'.format(100 * correct / total))
 end_time = time.time()
 print("time: ", end_time - start_time)
-print('Accuracy of the network on the 10000 test images:{}%'.format(100 * total_correct / total_total))
+print('Accuracy of the communication on the 10000 test images:{}%'.format(100 * total_correct / total_total))

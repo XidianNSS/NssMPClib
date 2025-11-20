@@ -12,33 +12,20 @@ layers = "Conv2d|MaxPool2d|ReLU|Linear|AdaptiveAvgPool2d|AvgPool2d|BatchNorm2d|E
 
 
 def sec_format(filepath):
-    """
-    Format and process the code in the given file path.
+    """Format and process the code in the given file path.
 
-    After opening the file in read-only mode:
-        1. ``code = re.sub(r'(?<!["\'])#.*', '', code)`` Use the regular expression ``re.sub`` to remove single-line comments starting with **#**.
+    This function reads a python file, removes comments (single-line and multi-line),
+    removes empty lines, processes specific layer definitions using `_layer_sec`,
+    and replaces `.view()` calls with `.reshape()`.
 
-        .. note::
-            **(? <! ["\'])** Make sure that **#** is not preceded by single or double quotes to avoid deleting the comment part of the string.
+    Args:
+        filepath (str): The path of the file to be processed.
 
-        2. ``code = re.sub(r'(\'\'\'(.*?)\'\'\'|\"\"\"(.*?)\"\"\")', '', code, flags=re.DOTALL)`` Use regular expressions to remove multi-line comments.
+    Returns:
+        str: Processed code string.
 
-        .. note::
-            ``flags=re.DOTALL`` enables. To match newlines and thus capture multiple lines of comments.
-
-        3. ``code = re.sub(r'\s*$', '', code, flags=re.M)`` Delete all empty lines using regular expressions.
-
-        .. note::
-            ``flags=re.M`` makes **^** and **$** match the beginning and end of each line
-
-        4. ``code = _layer_sec(code)`` Call the :func:`_layer_sec` function to perform specific processing on the model layer
-
-        5. ``code = re.sub(r'(.*?=.*?\.)(view)(\(.*?\))', r'\1reshape\3', code)`` Replace all calls to ``.view()`` with ``.reshape()``, which is to change the shape of the tensor
-
-    :param filepath: The path of the file to be processed
-    :type filepath: str
-    :return: Processed code string
-    :rtype: str
+    Examples:
+        >>> code = sec_format('path/to/model.py')
     """
     model_file = open(filepath, "r", encoding="UTF-8")
     code = model_file.read()
@@ -51,25 +38,22 @@ def sec_format(filepath):
 
 
 def _layer_sec(code):
-    """
-    The purpose of the function is to process a given code string.
+    """Process a given code string to replace standard layers with secure layers.
 
-    * Find the Sequential layer:
-        After extracting each Sequential block, extract the full Sequential paragraph, replace the layer name in the segment with a regular expression, Replace **(.Layername)** with **(.sec.Layername)**, leaving the preceding space.
+    This function performs several transformations:
+    1. Replaces layers inside `Sequential` blocks with their secure counterparts (e.g., `Layer` -> `SecLayer`).
+    2. Replaces layers in assignment and return statements.
+    3. Replaces `relu` calls with `SecReLU`.
+    4. Adds an import statement for `NssMPC.application.neural_network.layers`.
 
-    * Replace layers in assignment and return statements:
-        Replace the layer name in any assignment or return statement with the **(.Sec)** form
+    Args:
+        code (str): The string to be processed.
 
-    * Replace relu call:
-        Replace all relu calls to non-self objects with the SecReLU() method
+    Returns:
+        str: Processed code string.
 
-    * Add import statement:
-        At the beginning of the code to add a line of import statements to ``NssMPC.application.neural_network.layers``. The layers module import, and use the name as the alias.
-
-    :param code: The string to be processed
-    :type code: str
-    :return: Processed code string
-    :rtype: str
+    Examples:
+        >>> new_code = _layer_sec(original_code_string)
     """
     replacements = []
     for item in re.finditer(r'.*Sequential\(', code):

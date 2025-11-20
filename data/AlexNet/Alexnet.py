@@ -2,7 +2,7 @@ from torch import nn
 
 
 class AlexNet(nn.Module):
-    def __init__(self, in_channels=1, num_classes=10):
+    def __init__(self, in_channels=3, num_classes=10):
         super(AlexNet, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size=3, stride=2, padding=1),

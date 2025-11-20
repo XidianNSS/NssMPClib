@@ -45,7 +45,7 @@ net.to(device)
 
 print("Start Training!")
 
-num_epochs = 5
+num_epochs = 20
 
 for epoch in range(num_epochs):
     running_loss = 0
@@ -67,9 +67,9 @@ print("Finished Training")
 
 if not os.path.exists(NN_path):
     os.makedirs(NN_path)
-torch.save(net.state_dict(), NN_path + '/AlexNet_MNIST.pkl')
+torch.save(net.state_dict(), NN_path + '/AlexNet_CIFAR10.pkl')
 
-net.load_state_dict(torch.load(NN_path + '/AlexNet_MNIST.pkl'))
+net.load_state_dict(torch.load(NN_path + '/AlexNet_CIFAR10.pkl'))
 start_time = time.time()
 
 with torch.no_grad():
@@ -90,4 +90,4 @@ with torch.no_grad():
 
 end_time = time.time()
 print("time", end_time - start_time)
-print('Accuracy of the network on the 100 test images:{}%'.format(100 * total_correct / total_total))
+print('Accuracy of the communication on the 100 test images:{}%'.format(100 * total_correct / total_total))

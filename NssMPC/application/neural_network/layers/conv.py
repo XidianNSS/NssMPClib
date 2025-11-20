@@ -15,41 +15,28 @@ from NssMPC.config import DEVICE
 
 class SecConv2d(torch.nn.Module):
     """
-    * The implementation of this class is mainly based on the `paper Sonic <https://maggichk.github.io/papers/sonic.pdf>`_.
+    A secure convolution operation suitable for scenarios where data privacy and sharing are required.
 
-    A secure convolution operation has been implemented, suitable for scenarios where data privacy and sharing are required.
+    The implementation of this class is mainly based on the paper Sonic.
     """
 
     def __init__(self, in_channel, out_channel, kernel_size, stride=(1, 1), padding=(0, 0), dilation=1, bias=None,
                  device=DEVICE):
         """
-        :param in_channel: The number of input channels.
-        :type in_channel: int
-        :param out_channel: The number of output channels.
-        :type out_channel: int
-        :param kernel_size: The size of the convolutional kernel.
-        :type kernel_size: int
-        :param stride: Convolution stride (the default value is **(1, 1)**).
-        :type stride: tuple or list or int
-        :param padding: Input boundary padding (default is **(0, 0)**).
-        :type padding: tuple or list
-        :param dilation: The spacing between the elements of the convolutional kernel (default is **1**).
-        :type dilation: int
-        :param bias: bias term
-        :type bias: torch.Tensor
-        :param device: The device where tensors are stored.
-        :type device: str
+        Initializes the SecConv2d layer.
 
-        ATTRIBUTES:
-            * **weight** (*torch.Tensor*): The weights of neural networks
-            * **kernel_shape** (*torch.Tensor*): Shape of the convolution kernel
-            * **stride** (*int*): Convolution stride
-            * **padding** (*int*): Input boundary padding
-            * **dilation** (*int*): In order to make the CNN model can capture longer distances without increasing the model parameters.
-            * **out_shape** (*torch.Tensor*): Shape of the output data
-            * **bias** (*torch.Tensor*): bias term
-            * **device** (*str*): The device where tensors are stored
+        Args:
+            in_channel (int): The number of input channels.
+            out_channel (int): The number of output channels.
+            kernel_size (int): The size of the convolutional kernel.
+            stride (tuple or list or int, optional): Convolution stride. Defaults to (1, 1).
+            padding (tuple or list, optional): Input boundary padding. Defaults to (0, 0).
+            dilation (int, optional): The spacing between the elements of the convolutional kernel. Defaults to 1.
+            bias (torch.Tensor, optional): Bias term.
+            device (str, optional): The device where tensors are stored.
 
+        Examples:
+            >>> conv = SecConv2d(in_channel=3, out_channel=16, kernel_size=3)
         """
         # TODO: support dilation and different padding, stride for height and width
         super(SecConv2d, self).__init__()
@@ -72,14 +59,16 @@ class SecConv2d(torch.nn.Module):
 
     def get_out_shape(self, x):
         """
-        Calculate the shape of the output.
+        Calculates the shape of the output.
 
-        The output height and width are calculated based on the input height, width, size of the convolutional kernel, padding, and stride.
+        Args:
+            x (RingTensor): The input tensor.
 
-        :param x: The input tensor
-        :type x: RingTensor
-        :return: The batch size, the number of output channels, height, and width.
-        :rtype: tuple
+        Returns:
+            tuple: The batch size, the number of output channels, height, and width.
+
+        Examples:
+            >>> shape = conv.get_out_shape(input_tensor)
         """
         n, img_c, img_h, img_w = x.shape
         kn, kc, kh, kw = self.kernel_shape
@@ -90,20 +79,16 @@ class SecConv2d(torch.nn.Module):
 
     def forward(self, x):
         """
-        Define the convolution forward propagation process.
+        Defines the convolution forward propagation process.
 
-        The convolution operation means that the convolution kernel slides over the input image and performs
-        element-level product and sum at each position to generate an output value. This process is repeated many
-        times to generate a complete feature map, and the dimension of the output feature map is equal to the number
-        of convolution cores.
+        Args:
+            x (ArithmeticSecretSharing or ReplicatedSecretSharing): The input tensor.
 
-        To speed up parallelization, the shape of input ``x`` is changed first, matrix multiplication
-        with weight, finally add bias as the result.
+        Returns:
+            RingTensor: The output tensor after the convolution operation.
 
-        :param x: The input tensor
-        :type x: ArithmeticSecretSharing or ReplicatedSecretSharing
-        :return: The output tensor after the convolution operation.
-        :rtype: RingTensor
+        Examples:
+            >>> output = conv(input_tensor)
         """
         weight = torch2share(self.weight, x.__class__, x.dtype)
 

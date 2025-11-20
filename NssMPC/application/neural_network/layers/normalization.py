@@ -12,29 +12,22 @@ from NssMPC.config import data_type
 
 class SecLayerNorm(torch.nn.Module):
     """
-    * The implementation of this class is mainly based on the `paper Sigma <https://eprint.iacr.org/2023/1269.pdf>`_.
+    The SecLayerNorm class is used to implement layer normalization.
+
+    The implementation of this class is mainly based on the paper Sigma.
     """
 
     def __init__(self, normalized_shape, eps=1e-05, elementwise_affine=True):
         """
-        Initialize the SecLayerNorm class.
+        Initializes the SecLayerNorm class.
 
-        :param normalized_shape: The dimension that needs normalization is usually the last dimension of the input tensor.
-        :type normalized_shape: int
-        :param eps: Constants are used to prevent division by zero errors (default is **1e-05**).
-        :type eps: float
-        :param elementwise_affine: The parameter indicates whether to use learnable scaling and translation (weight and bias) (the default value set to **True**).
-        :type elementwise_affine: bool
+        Args:
+            normalized_shape (int or list): The dimension that needs normalization is usually the last dimension of the input tensor.
+            eps (float, optional): Constants are used to prevent division by zero errors. Defaults to 1e-05.
+            elementwise_affine (bool, optional): Indicates whether to use learnable scaling and translation (weight and bias). Defaults to True.
 
-        ATTRIBUTES:
-            * **normalized_shape** (*int*): The dimension that needs normalization is usually the last dimension of the input tensor.
-            * **eps** (*float*): Constants are used to prevent division by zero errors (default is **1e-05**).
-            * **weight** (*torch.Tensor*): The weights of neural networks.
-            * **bias** (*torch.Tensor*): bias term
-            * **scale** (*torch.Tensor*): the scale of the tensor.
-            * **zero_point** (*int*): The weights of neural networks.
-            * **elementwise_affine** (*torch.Tensor*): The weights of neural networks.
-
+        Examples:
+            >>> norm = SecLayerNorm(normalized_shape=10)
         """
         super(SecLayerNorm, self).__init__()
         self.normalized_shape = normalized_shape
@@ -49,18 +42,16 @@ class SecLayerNorm(torch.nn.Module):
 
     def forward(self, x):
         """
-        The forward propagation process.
+        The forward propagation process for layer normalization.
 
-        Start by summing the input ``x`` along the last dimension, divided by the mean obtained by ``self.normalized_shape``.
-        The input data is then centralized, i.e. the mean is subtracted from each element. After calculating the
-        reciprocal of the square root of variance ``inv_sqrt_variance``, we use the :func:`~NssMPC.application.neural_network.functional.functional.torch2share` function to obtain weight
-        and bias. Finally, we multiply the centralized data by the reciprocal of the standard deviation and apply
-        scaling (if ``elementwise_affine`` is enabled). And then you add the ``bias``.
+        Args:
+            x (ArithmeticSecretSharing or ReplicatedSecretSharing): Input tensor, typically coming from the output of the previous layer.
 
-        :param x: Input tensor, typically coming from the output of the previous layer.
-        :type x: ArithmeticSecretSharing or ReplicatedSecretSharing
-        :return: A tensor after layer normalization
-        :rtype: ArithmeticSecretSharing or ReplicatedSecretSharing
+        Returns:
+            ArithmeticSecretSharing or ReplicatedSecretSharing: A tensor after layer normalization.
+
+        Examples:
+            >>> output = norm(input_tensor)
         """
         mean = x.sum(dim=-1).unsqueeze(-1) / self.normalized_shape
 

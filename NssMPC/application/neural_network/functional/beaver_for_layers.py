@@ -1,5 +1,5 @@
 """
-Generate the required beaver according to the needs of the neural network layers
+Generate the required beaver according to the needs of the neural communication layers
 Support matrix beaver for convolutional, linear layers and average pooling layers
 """
 #  This file is part of the NssMPClib project.
@@ -7,32 +7,39 @@ Support matrix beaver for convolutional, linear layers and average pooling layer
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 import warnings
+
 import torch
 
-from NssMPC.config.runtime import PartyRuntime
-from NssMPC.crypto.aux_parameter import MatmulTriples, RssMatmulTriples
-from NssMPC.secure_model.mpc_party import SemiHonestCS, HonestMajorityParty
+from NssMPC.infra.mpc.party import SemiHonestCS, HonestMajorityParty, PartyCtx, Party
+from NssMPC.protocols.honest_majority_3pc import RssMatmulTriples
+from NssMPC.protocols.semi_honest_2pc import MatmulTriples
 
 
-def beaver_for_conv(x, kernel, padding, stride, num_of_triples):
-    """
-    The way to generate matrix beaver triples of convolutional layers.
+def beaver_for_conv(x, kernel, padding, stride, num_of_triples, party: Party = PartyCtx.get()):
+    """Generate matrix Beaver triples for convolutional layers.
 
-    First calculate the height and width of the feature map, and then determine the type of ``x.party``:
-        * If x is :class:`~NssMPC.secure_model.mpc_party.semi_honest.SemiHonestCS` (Semi-honest Computation Model): Call the :meth:`~NssMPC/crypto/aux_parameter/beaver_triples/arithmetic_triples.MatmulTriples.gen` method to generate the multiplication triple.
-        * If x is :class:`~NssMPC.secure_model.mpc_party.honest_majority.HonestMajorityParty` (Honest Majority Model): Call the :meth:`~NssMPC/crypto/aux_parameter/beaver_triples/arithmetic_triples.RssMatmulTriples.gen` method to generate the multiplication triple
-        * If the party type is not among the known categories: A warning is issued and the default call to :meth:`~NssMPC/crypto/aux_parameter/beaver_triples/arithmetic_triples.RssMatmulTriples.gen` is made.
+    This function calculates the height and width of the feature map, and dispatches the generation task
+    based on the type of ``x.party``:
 
-    :param x: the input tensor
-    :type x: torch.Tensor
-    :param kernel: the convolutional kernel
-    :type kernel: torch.Tensor
-    :param padding: Fill in the data at the periphery edge
-    :type padding: int
-    :param stride: The step size of the position at each slide
-    :type stride: int
-    :param num_of_triples: the number of triples
-    :type num_of_triples: int
+    * If **Semi-Honest** (:class:`~NssMPC.runtime.party.semi_honest.SemiHonestCS`):
+      Calls :meth:`~NssMPC.crypto.aux_parameter.beaver_triples.arithmetic_triples.MatmulTriples.gen`.
+    * If **Honest-Majority** (:class:`~NssMPC.runtime.party.honest_majority.HonestMajorityParty`):
+      Calls :meth:`~NssMPC.crypto.aux_parameter.beaver_triples.arithmetic_triples.RssMatmulTriples.gen`.
+    * **Fallback**: Issues a warning and defaults to ``RssMatmulTriples.gen``.
+
+    Args:
+        x (torch.Tensor or RingTensor): The input tensor, used to determine shapes and the associated party.
+        kernel (torch.Tensor): The convolutional kernel tensor.
+        padding (int): The amount of implicit padding on both sides.
+        stride (int): The stride of the convolving kernel.
+        num_of_triples (int): The number of triples to generate.
+        party: The party instance. Defaults to the current context specific party.
+
+    Returns:
+        list: A list or collection of generated multiplication triples.
+
+    Examples:
+        >>> triples = beaver_for_conv(x, kernel, padding=1, stride=1, num_of_triples=10)
     """
     n, c, h, w = x.shape
     f, _, k, _ = kernel.shape
@@ -41,64 +48,77 @@ def beaver_for_conv(x, kernel, padding, stride, num_of_triples):
     im2col_output_shape = torch.zeros([n, h_out * w_out, c * k * k]).shape
     reshaped_kernel_size = torch.zeros([1, c * k * k, f]).shape
     shapes = im2col_output_shape, reshaped_kernel_size
-    if isinstance(PartyRuntime.party, SemiHonestCS):
+    if isinstance(party, SemiHonestCS):
         return MatmulTriples.gen(num_of_triples, shapes[0], shapes[1])
-    elif isinstance(PartyRuntime.party, HonestMajorityParty):
+    elif isinstance(party, HonestMajorityParty):
         return RssMatmulTriples.gen(num_of_triples, shapes[0], shapes[1])
     else:
         warnings.warn("Maybe this party do not need to generate beaver triples.")
         return RssMatmulTriples.gen(num_of_triples, shapes[0], shapes[1])
 
 
-def beaver_for_linear(x, weight, num_of_triples):
-    """
-    The way to generate matrix beaver triples of linear layers.
+def beaver_for_linear(x, weight, num_of_triples, party: Party = PartyCtx.get()):
+    """Generate matrix Beaver triples for linear (fully connected) layers.
 
-    First transpose the weight so that it matches the shape of the input tensor. Then determine what type of triples to generate based on the type of ``x.party``:
-        * If x is :class:`~NssMPC.secure_model.mpc_party.semi_honest.SemiHonestCS` (Semi-honest Computation Model): Call the :meth:`~NssMPC/crypto/aux_parameter/beaver_triples/arithmetic_triples.MatmulTriples.gen` method to generate the multiplication triple
-        * If x is :class:`~NssMPC.secure_model.mpc_party.honest_majority.HonestMajorityParty` (Honest Majority Model): Call the :meth:`~NssMPC/crypto/aux_parameter/beaver_triples/arithmetic_triples.RssMatmulTriples.gen` method to generate the multiplication triple
-        * If the party type is not among the known categories: A warning is issued and the default call to :meth:`~NssMPC/crypto/aux_parameter/beaver_triples/arithmetic_triples.RssMatmulTriples.gen` is made.
+    First, the weight tensor is transposed to match the input tensor's shape for matrix multiplication.
+    Then, the generation strategy is dispatched based on the type of ``x.party``:
 
-    :param x: The input tensor
-    :type x: torch.Tensor
-    :param weight: Multiply each element of an image
-    :type weight: torch.Tensor
-    :param num_of_triples: the number of triples
-    :type num_of_triples: int
+    * **Semi-Honest** (:class:`~NssMPC.runtime.party.semi_honest.SemiHonestCS`):
+      Calls :meth:`~NssMPC.crypto.aux_parameter.beaver_triples.arithmetic_triples.MatmulTriples.gen`.
+    * **Honest-Majority** (:class:`~NssMPC.runtime.party.honest_majority.HonestMajorityParty`):
+      Calls :meth:`~NssMPC.crypto.aux_parameter.beaver_triples.arithmetic_triples.RssMatmulTriples.gen`.
+    * **Fallback**: Issues a warning and defaults to ``RssMatmulTriples.gen``.
+
+    Args:
+        x (torch.Tensor): The input tensor.
+        weight (torch.Tensor): The weight tensor of the linear layer.
+        num_of_triples (int): The number of triples to generate.
+        party: The party instance. Defaults to the current context specific party.
+
+    Returns:
+        list: A list or collection of generated multiplication triples.
+
+    Examples:
+        >>> triples = beaver_for_linear(x, weight, num_of_triples=10)
     """
 
     weight = weight.T
-    if isinstance(PartyRuntime.party, SemiHonestCS):
+    if isinstance(party, SemiHonestCS):
         return MatmulTriples.gen(num_of_triples, x.shape, weight.shape)
-    elif isinstance(PartyRuntime.party, HonestMajorityParty):
+    elif isinstance(party, HonestMajorityParty):
         return RssMatmulTriples.gen(num_of_triples, x.shape, weight.shape)
     else:
         warnings.warn("Maybe this party do not need to generate beaver triples.")
         return RssMatmulTriples.gen(num_of_triples, x.shape, weight.shape)
 
 
-def beaver_for_avg_pooling(x, kernel_shape, padding, stride, num_of_triples):
-    """
-    The way to generate matrix beaver triples of average pooling layers.The function logic is basically the same as :func:`beaver_for_conv`.
+def beaver_for_avg_pooling(x, kernel_shape, padding, stride, num_of_triples, party: Party = PartyCtx.get()):
+    """Generate matrix Beaver triples for average pooling layers.
 
-    :param x: the input tensor
-    :type x: torch.Tensor
-    :param kernel_shape: The width or height of the convolution kernel
-    :type kernel_shape: int
-    :param padding: Fill in the data at the periphery edge
-    :type padding: int
-    :param stride: The step size of the position at each slide
-    :type stride: int
-    :param num_of_triples: the number of triples
-    :type num_of_triples: int
+    The function logic follows the same dispatch mechanism as :func:`beaver_for_conv`.
+    It prepares the necessary pre-computed data (triples) to compute average pooling via matrix operations or secure division.
+
+    Args:
+        x (torch.Tensor): The input tensor.
+        kernel_shape (int): The size of the pooling window (kernel size).
+        padding (int): The amount of implicit padding on both sides.
+        stride (int): The stride of the pooling window.
+        num_of_triples (int): The number of triples to generate.
+        party: The party instance. Defaults to the current context specific party.
+
+    Returns:
+        list: A list or collection of generated multiplication triples.
+
+    Examples:
+        >>> triples = beaver_for_avg_pooling(x, kernel_shape=2, padding=0, stride=2, num_of_triples=10)
     """
     n, c, h, w = x.shape
     h_out = (h + 2 * padding - kernel_shape) // stride + 1
     w_out = (w + 2 * padding - kernel_shape) // stride + 1
     shapes = torch.zeros([n, c, h_out * w_out, kernel_shape * kernel_shape]).shape
-    if isinstance(PartyRuntime.party, SemiHonestCS):
+    if isinstance(party, SemiHonestCS):
         return MatmulTriples.gen(num_of_triples, shapes, torch.zeros([shapes[3], 1]).shape)
-    elif isinstance(PartyRuntime.party, HonestMajorityParty):
+    elif isinstance(party, HonestMajorityParty):
         return RssMatmulTriples.gen(num_of_triples, shapes, torch.zeros([shapes[3], 1]).shape)
     else:
         warnings.warn("Maybe this party do not need to generate beaver triples.")
@@ -106,19 +126,22 @@ def beaver_for_avg_pooling(x, kernel_shape, padding, stride, num_of_triples):
 
 
 def beaver_for_adaptive_avg_pooling(x, output_shape, num_of_triples):
-    """
-    The way to generate matrix beaver triples of adaptive average pooling layers.
+    """Generate matrix beaver triples of adaptive average pooling layers.
 
     After obtaining the shape of the input and output tensors, calculate the step length(``stride``) and convolution kernel size(``kernel_size``),
     convert ``kernel_size`` and ``stride`` into a Python list, which is convenient to pass to the function later,
     and then call the function :func:`beaver_for_avg_pooling` to generate the Beaver triplet.
 
-    :param x: The input tensor
-    :type x: torch.Tensor
-    :param output_shape: the shape of the output tensor
-    :type output_shape: tuple
-    :param num_of_triples: the number of triples
-    :type num_of_triples: int
+    Args:
+        x (torch.Tensor): The input tensor.
+        output_shape (tuple): The shape of the output tensor.
+        num_of_triples (int): The number of triples.
+
+    Returns:
+        list: A list or collection of generated multiplication triples.
+
+    Examples:
+        >>> triples = beaver_for_adaptive_avg_pooling(x, output_shape=(5, 5), num_of_triples=10)
     """
     input_shape = torch.tensor(x.shape[2:])
     output_shape = torch.tensor(output_shape)

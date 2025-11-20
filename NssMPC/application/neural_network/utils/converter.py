@@ -6,45 +6,40 @@ import inspect
 import os
 from collections import OrderedDict
 
+import torch
+
 from NssMPC.application.neural_network.utils.model_compiler import sec_format
-from NssMPC.common.ring.ring_tensor import *
+from NssMPC.infra.tensor import RingTensor
 from NssMPC.config.configs import DEVICE
 
 
 def share_model(model, share_type=22):
-    """
-    For the model holder.
-    Load the parameters of the plaintext model and share them into n shares,
-    which are the parameters of the ciphertext model.
+    """Load the parameters of the plaintext model and share them into n shares.
 
-    then, Make sure that the ``share_type`` is set to 22 or 32,
-    and calculate the number of participants (2 or 3). Based on the value of share_type, import the corresponding sharing method:
-        * 22 represents Arithmetic Secret Sharing.
-        * 32 represents Replicated Secret Sharing.
+    This function converts the model parameters to RingTensors and then shares them
+    using either Arithmetic Secret Sharing (type 22) or Replicated Secret Sharing (type 32).
+    It also handles Batch Normalization layer adjustments.
 
-    Then, call the internal function to ensure that the BatchNorm layer parameters in the model have been properly
-    adjusted. After initializing a list of ``num_of_party`` element parameter dictionaries, where each dictionary is
-    used to store the shared parameters for the corresponding participant, traversing the model's parameter
-    dictionary.The parameters are shared after each parameter is converted to the ring, and the shared values are
-    stored in a dictionary.
+    Args:
+        model (torch.nn.Module): The class of plaintext model.
+        share_type (int): An integer indicating the shared type (22 or 32). Defaults to 22.
 
-    :param model: the class of plaintext model
-    :type model: torch.nn.Module
-    :param share_type: An integer indicating the shared type, which determines the number of participants and the sharing method. Supports 22 and 32.
-    :type share_type: int
+    Returns:
+        list: A list of dictionaries, where each dictionary contains the shared parameters for a participant.
+
+    Examples:
+        >>> param_shares = share_model(model, share_type=22)
     """
 
     # TODO: Transformer模型可能存在无法加载明文参数的情况，此时是否修改为再传一个明文参数的state_dict
     def modify_bn_layers(module):
-        """
-        Modify the parameters of the Batch Normalization layer to adapt to the subsequent shared process.
-        For the BatchNorm layer, extract its ``gamma``, ``beta``, ``running_mean``, and ``running_var``. For each
-        submodule, recursively call :func:`modify_bn_layers`.
+        """Modify the parameters of the Batch Normalization layer.
 
-        :param module: the class of plaintext model
-        :type module: torch.nn.Module
-        :return: the parameters of the Batch Normalization layer
-        :rtype: list
+        Args:
+            module (torch.nn.Module): The class of plaintext model.
+
+        Examples:
+            >>> modify_bn_layers(model)
         """
         if isinstance(module, torch.nn.modules.batchnorm.BatchNorm2d):
             gamma = module.weight.data
@@ -64,9 +59,9 @@ def share_model(model, share_type=22):
     num_of_party = share_type // 10
 
     if share_type == 22:
-        from NssMPC import ArithmeticSecretSharing as ShareType
+        from NssMPC.primitives.secret_sharing import AdditiveSecretSharing as ShareType
     elif share_type == 32:
-        from NssMPC import ReplicatedSecretSharing as ShareType
+        from NssMPC.primitives import ReplicatedSecretSharing as ShareType
     modify_bn_layers(model)
 
     param_dict_list = [OrderedDict() for _ in range(num_of_party)]
@@ -79,19 +74,15 @@ def share_model(model, share_type=22):
 
 
 def share_and_save_model(model, save_path, num_of_party=2):
-    """
-    Securely split the given plaintext model and save the shared model parameters to the specified path.
+    """Securely split the given plaintext model and save the shared model parameters.
 
-    First, the :func:`share_model` function is called to secretly share the parameters of the model, check whether the
-    specified saving path exists, and create the directory if it does not exist. Finally, the parameters of each
-    participant are saved in the specified path
+    Args:
+        model (torch.nn.Module): The class of plaintext model.
+        save_path (str): Path to save the shared ciphertext weights.
+        num_of_party (int): The number of parties. Defaults to 2.
 
-    :param model: the class of plaintext model
-    :type model: torch.nn.Module
-    :param save_path: path to save the shared ciphertext weights
-    :type save_path: str
-    :param num_of_party: the number of parties
-    :type num_of_party: int
+    Examples:
+        >>> share_and_save_model(model, './params', num_of_party=2)
     """
     param_list = share_model(model, num_of_party)
     if not os.path.exists(save_path):
@@ -101,18 +92,18 @@ def share_and_save_model(model, save_path, num_of_party=2):
 
 
 def load_model_from_file(net, path, party):
-    """
-    For the computation party.First load the parameter path, then call the function :func:`load_model` to load the model.
+    """Load the model parameters from a file for the computation party.
 
-    :param net: the class of plaintext model.
-    :type net: torch.nn.Module
-    :param path: Path to the ciphertext weights held by this party.
-    :type path: str
-    :param party: participant
-    :type party: str
+    Args:
+        net (torch.nn.Module): The class of plaintext model.
+        path (str): Path to the ciphertext weights held by this party.
+        party: The participant object.
 
     Returns:
-        Cipher algorithm model loaded with weights
+        torch.nn.Module: Cipher algorithm model loaded with weights.
+
+    Examples:
+        >>> model = load_model_from_file(Net(), './params', party)
     """
     party.wait()
     param_dict = torch.load(path + f'/{net.__class__.__name__}_params_{str(party.party_id)}.pkl', map_location=DEVICE)
@@ -120,22 +111,20 @@ def load_model_from_file(net, path, party):
 
 
 def load_model(net, param_dict):
-    """
-    For the computation party.Load an encryption algorithm model and convert its parameters from ciphertext format to plaintext format.
+    """Load an encryption algorithm model and convert its parameters from ciphertext format.
 
-    After obtaining the source file path of the current model class, execute the code defined by the model using exec.
+    This function dynamically executes the model definition code (processed by `sec_format`)
+    to instantiate the secure model and loads the provided parameters.
 
-    .. note::
-        *locals()* is passed to *exec*, which makes all local variables available in the current context when the model definition is executed.
+    Args:
+        net (torch.nn.Module): The class of plaintext model.
+        param_dict (dict): The parameters of the ciphertext model.
 
-    The model is then instantiated, obtaining the name of the model class from the local namespace, and creating an instance of the class. After the model is set to evaluation mode, the parameters in the parameter dictionary are loaded into the model parameters.
+    Returns:
+        torch.nn.Module: Cipher algorithm model loaded with weights.
 
-    :param net: the class of plaintext model
-    :type net: torch.nn.Module
-    :param param_dict: the parameters of the ciphertext model
-    :type param_dict: dict
-    :returns: Cipher algorithm model loaded with weights
-    :rtype: torch.nn.Module
+    Examples:
+        >>> model = load_model(Net(), param_dict)
     """
     model_file_path = inspect.getsourcefile(net.__class__)
     exec(sec_format(model_file_path), locals())
@@ -148,31 +137,28 @@ def load_model(net, param_dict):
 
 
 def share_data(*inputs, share_type=22):
-    """
-    Perform secret sharing on input data for the data owner.
+    """Perform secret sharing on input data for the data owner.
 
-    This method supports two different sharing types (22 and 32) and returns a list of shared data.
-    It securely splits the provided input data into shares for multiple parties, facilitating secure multi-party computation.
+    Args:
+        *inputs: The input data (torch.Tensor) or paths to images (str).
+        share_type (int): The sharing type (22 or 32). Defaults to 22.
 
-    The function determines the sharing method based on the `share_type` parameter. For `share_type` 22,
-    it uses Arithmetic Secret Sharing, while for 32, it uses Replicated Secret Sharing. It then processes each
-    input, performing necessary conversions and sharing operations.
+    Returns:
+        list: The shared data list.
 
-    :param inputs: the input data
-    :type inputs: torch.Tensor
-    :param share_type: the number of parties
-    :type share_type: int
-    :returns: the shared data list
-    :rtype: list
-    :raises TypeError: If an unsupported data type is provided as input.
+    Raises:
+        TypeError: If an unsupported data type is provided as input.
+
+    Examples:
+        >>> shares = share_data(input_tensor, share_type=22)
     """
     assert share_type in [22, 32]
     num_of_party = share_type // 10
 
     if share_type == 22:
-        from NssMPC import ArithmeticSecretSharing as ShareType
+        from NssMPC.primitives import AdditiveSecretSharing as ShareType
     elif share_type == 32:
-        from NssMPC import ReplicatedSecretSharing as ShareType
+        from NssMPC.primitives import ReplicatedSecretSharing as ShareType
 
     input_shares = [[] for _ in range(num_of_party)]
     for input_info in inputs:
@@ -190,18 +176,19 @@ def share_data(*inputs, share_type=22):
 
 
 def image2tensor(image_path):
-    """
-    Check whether the given image_path file path ends with a supported image file type.
+    """Check whether the given image_path file path ends with a supported image file type.
 
-    First press the file path to the point (.) via the ``split('.')`` method. Split into a list and take the last element
-    of the list, then check whether the extracted file extension is not in the supported extension tuple ('jpg',
-    'png', 'bmp').
+    Args:
+        image_path (str): The path of the image.
 
-    :param image_path: the path of the image
-    :type image_path: str
-    :returns: the tensor representing the image
-    :rtype: torch.Tensor
-    :raises TypeError: If the extension is not among the supported file types.
+    Returns:
+        torch.Tensor: The tensor representing the image.
+
+    Raises:
+        TypeError: If the extension is not among the supported file types.
+
+    Examples:
+        >>> tensor = image2tensor('image.jpg')
     """
     if not image_path.split('.')[-1] in ('jpg', 'png', 'bmp'):
         raise TypeError("unsupported file type:", image_path.split('.')[-1])
@@ -214,58 +201,19 @@ def image2tensor(image_path):
 
 
 def gen_mat_beaver(dummy_input, model, num_of_triples, num_of_party=2):
-    """
-    For the model holder. By registering a forward hook, you can monitor specific types of layers and generate corresponding Beaver triples for each layer.
+    """Generate Beaver triples for specific layers by registering a forward hook.
 
-    :param dummy_input: Analogue inputs of the same size as the neural network inputs.
-    :type dummy_input: torch.Tensor
-    :param model: the class of plaintext model
-    :type model: torch.nn.Module
-    :param num_of_triples: The number of Beaver triples to be generated.
-    :type num_of_triples: int
-    :param num_of_party: The number of parties involved in the computation.
-    :type num_of_party: int
-    :returns: The list of Beaver triples for each party.
-    :rtype: list
+    Args:
+        dummy_input (torch.Tensor): Analogue inputs of the same size as the neural communication inputs.
+        model (torch.nn.Module): The class of plaintext model.
+        num_of_triples (int): The number of Beaver triples to be generated.
+        num_of_party (int): The number of parties involved in the computation. Defaults to 2.
 
-    - :func:`hook_fn`
-        Generate a Beaver triad for each layer.
+    Returns:
+        list: The list of Beaver triples for each party.
 
-        This is a callback function that is called when a certain layer of the neural network is executed,
-        calling the corresponding function based on the type of the current layer to generate the Beaver triplet,
-        and storing the result.
-
-        .. note::
-            Hooks are usually temporary and only needed during specific forward or backward propagation
-            processes. They are registered and used immediately, then removed to avoid any impact on subsequent operations.
-
-
-        PARAMETERS:
-            * **module** (*torch.nn.Module*): The current layer.
-            * **input** (*torch.Tensor*): input data
-            * **output** (*torch.Tensor*): output data
-
-        RETURNS:
-            generated Beaver triples
-
-        RETURN TYPE:
-            list
-
-    - :func:`register_hooks`
-        Register forward hooks.
-
-        The register_hooks function recursively registers forward hooks for each submodule
-
-        PARAMETERS:
-            * **module** (*torch.nn.Module*): The current layer.
-            * **hook** (*list*): Forward hook
-
-        RETURNS:
-            List of registered hooks.
-
-        RETURN TYPE:
-            list
-
+    Examples:
+        >>> beavers = gen_mat_beaver(input, model, 100)
     """
     mat_beaver_lists = [[] for _ in range(num_of_party)]
     from NssMPC.application.neural_network.functional.beaver_for_layers import beaver_for_adaptive_avg_pooling, \
@@ -287,17 +235,17 @@ def gen_mat_beaver(dummy_input, model, num_of_triples, num_of_party=2):
             mat_beaver_lists[i].append(mat_beavers[i])
 
     def register_hooks(module, hook):
-        """
-        Register forward hooks.
+        """Register forward hooks recursively.
 
-        The register_hooks function recursively registers forward hooks for each submodule
+        Args:
+            module (torch.nn.Module): The current layer.
+            hook (callable): Forward hook function.
 
-        :param module: The current layer
-        :type module: torch.nn.Module
-        :param hook: Forward hook
-        :type hook: func
-        :return: a function registered a hook.
-        :rtype: list
+        Returns:
+            list: List of registered hooks.
+
+        Examples:
+            >>> hooks = register_hooks(model, hook_fn)
         """
         hooks = []
         for child in module.children():
@@ -315,22 +263,20 @@ def gen_mat_beaver(dummy_input, model, num_of_triples, num_of_party=2):
 
 
 def embedding_preparation(inputs, each_embedding_size):
-    """
-    Responsible for converting input data into one-hot encoding, mainly used to prepare the input for the embedding layer.
+    """Convert input data into one-hot encoding for the embedding layer.
 
-    First determine the type of inputs:
-        For torch.Tensor: First convert the input to the integer type torch.int64, then use the ``F.on_hot`` function to generate a unique thermal encoding
+    Args:
+        inputs (torch.Tensor or list or tuple): The input data to be transformed.
+        each_embedding_size (int or list or tuple): The size of each embedding vector.
 
-        For list or tuple: first assert that ``each_embedding_size`` is also a list or tuple to make sure the length is the same, then perform the same unique heat encoding process for each input data as above, adding the results to the outputs list.
+    Returns:
+        list: The one-hot encoding of the input data.
 
+    Raises:
+        TypeError: If the inputs is not among the supported data types.
 
-    :param inputs: the input data to be transformed.
-    :type inputs: torch.Tensor
-    :param each_embedding_size: the size of each embedding vector.
-    :type each_embedding_size: int or list or tuple
-    :returns: the one-hot encoding of the input data.
-    :rtype: list
-    :raises TypeError: If the inputs is not among the supported data types.
+    Examples:
+        >>> one_hot = embedding_preparation(inputs, 10)
     """
     if isinstance(inputs, torch.Tensor):
         return F.one_hot(inputs.to(torch.int64), num_classes=each_embedding_size).to(inputs.dtype) * 1.0

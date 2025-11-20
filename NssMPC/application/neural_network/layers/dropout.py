@@ -1,6 +1,6 @@
 """
-Dropout is a regularization technique that is widely used in neural network training to prevent overfitting. Its
-basic idea is to randomly "drop out" a portion of neurons during each training iteration, so that the network is not
+Dropout is a regularization technique that is widely used in neural communication training to prevent overfitting. Its
+basic idea is to randomly "drop out" a portion of neurons during each training iteration, so that the communication is not
 dependent on certain specific neurons during training and thus improves the model's generalization ability.
 """
 #  This file is part of the NssMPClib project.
@@ -13,12 +13,14 @@ import torch
 class SecDropout(torch.nn.Module):
     def __init__(self, p: float = 0.5, inplace: bool = False):
         """
-        Initialize the SecDropout. Call the constructor of the parent class (torch.nn.Module).
+        Initializes the SecDropout.
 
-        :param p: The probability of discarding, assumed to be 0.5 by default, indicates that there is a 50% chance of setting the output of certain neurons to zero in each forward propagation.
-        :type p: float
-        :param inplace: If it is True, the operation will be performed in place, which may save memory.
-        :type inplace: bool
+        Args:
+            p: The probability of discarding. Defaults to 0.5.
+            inplace: If True, the operation will be performed in place. Defaults to False.
+
+        Examples:
+            >>> dropout = SecDropout(p=0.5)
         """
         super(SecDropout, self).__init__()
         pass
@@ -27,21 +29,29 @@ class SecDropout(torch.nn.Module):
         """
         The forward propagation process.
 
-        :param x: Input tensor, typically coming from the output of the previous layer.
-        :type x: ArithmeticSecretSharing
-        :return: Simply return the input ``x`` to indicate that no dropout operation has been performed yet.
-        :rtype: ArithmeticSecretSharing
+        Args:
+            x (ArithmeticSecretSharing): Input tensor.
+
+        Returns:
+            ArithmeticSecretSharing: Returns the input `x` (currently no dropout operation performed).
+
+        Examples:
+            >>> output = dropout(input_tensor)
         """
         return x
 
 
 def _SecDropout(x):
     """
-    This is a simple utility function. It simply returns the input ``x`` without doing any processing on it.
+    A simple utility function that returns the input `x`.
 
-    :param x: Input tensor
-    :type x: ArithmeticSecretSharing
-    :return: Simply return the input x to indicate that no dropout operation has been performed yet.
-    :rtype: ArithmeticSecretSharing
+    Args:
+        x (ArithmeticSecretSharing): Input tensor.
+
+    Returns:
+        ArithmeticSecretSharing: The input tensor.
+
+    Examples:
+        >>> output = _SecDropout(input_tensor)
     """
     return x

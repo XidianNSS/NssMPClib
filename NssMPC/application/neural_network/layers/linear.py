@@ -9,36 +9,24 @@ from NssMPC.config import DEVICE
 
 class SecLinear(torch.nn.Module):
     """
-    * The implementation of this class is mainly based on the `paper Sonic <https://maggichk.github.io/papers/sonic.pdf>`_.
-
     The class is used to perform linear transformation operations.
+
+    The implementation of this class is mainly based on the paper Sonic.
     """
 
     def __init__(self, input, output, weight=None, bias=None, device=DEVICE):
         """
-        Example Initialize the SecLinear.
+        Initializes the SecLinear layer.
 
-        Define ``self.weight`` and ``self.bias`` as model parameters, initialized to zero, and with a data type of int64. The ``requires_grad`` is set to **False**, which means that they will not be updated during backpropagation.
+        Args:
+            input (int): Dimension of the input feature.
+            output (int): Dimension of the output feature.
+            weight (torch.Tensor, optional): Optional weight parameters. Defaults to None.
+            bias (torch.Tensor, optional): Optional bias parameters. Defaults to None.
+            device (str, optional): The device where tensors are stored.
 
-        .. note::
-            If you want to make the weights and biases trainable, you can set ``requires_grad`` to **True**.
-
-        :param input: Dimension of the input feature
-        :type input: int
-        :param output: Dimension of the output feature
-        :type output: int
-        :param weight: Optional weight parameters, (default is **None**).
-        :type weight: torch.Tensor
-        :param bias: Optional bias parameters, (default is **None**).
-        :type bias: torch.Tensor
-        :param device: The device where tensors are stored.
-        :type device: str
-
-         ATTRIBUTES:
-            * **device** (*str*): The device where tensors are stored.
-            * **weight** (*torch.Tensor*): The weights of neural networks.
-            * **bias** (*torch.Tensor*): bias term
-
+        Examples:
+            >>> linear = SecLinear(input=10, output=5)
         """
         super(SecLinear, self).__init__()
         self.device = device
@@ -49,12 +37,14 @@ class SecLinear(torch.nn.Module):
         """
         The forward propagation process.
 
-        The weights and biases are first converted to shared form using the function :func:`~NssMPC.application.neural_network.functional.functional.torch2share`, and then ``z`` is computed by matrix multiplication and addition.
+        Args:
+            x (ArithmeticSecretSharing): Input tensor.
 
-        :param x: Input tensor, typically coming from the output of the previous layer.
-        :type x: ArithmeticSecretSharing
-        :return: The returned result ``z`` is calculated by a linear transformation.
-        :rtype: ArithmeticSecretSharing
+        Returns:
+            ArithmeticSecretSharing: The returned result calculated by a linear transformation.
+
+        Examples:
+            >>> output = linear(input_tensor)
         """
         weight = torch2share(self.weight, x.__class__, x.dtype).T
         bias = torch2share(self.bias, x.__class__, x.dtype)

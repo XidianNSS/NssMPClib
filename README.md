@@ -10,7 +10,7 @@ privacy-preserving neural network inference.
 
 ## Installation
 
-This project requires PyTorch>=1.8.0, and it is recommended to use PyTorch==2.3.0.
+This project requires PyTorch>=2.3.0, and it is recommended to use PyTorch==2.7.0.
 You can install this project by executing the following command:
 
 ```bash
