@@ -1,5 +1,5 @@
-from NssMPC.infra.mpc.party import Party3PC
-from NssMPC.runtime import PartyRuntime, SEMI_HONEST
+import NssMPC
+from NssMPC import Party3PC, SEMI_HONEST, PartyRuntime
 
 ns = [10 ** 3, 10 ** 4, 10 ** 5, 10 ** 6]
 
@@ -27,8 +27,8 @@ if __name__ == "__main__":
     for n in ns:
         with PartyRuntime(client):
             # 准备测试数据
-            share_x = client.recv(0)
-            share_y = client.recv(0)
+            share_x = NssMPC.SecretTensor(src_id=0)
+            share_y = NssMPC.SecretTensor(src_id=0)
 
             test_multiplication(share_x, share_y)
 

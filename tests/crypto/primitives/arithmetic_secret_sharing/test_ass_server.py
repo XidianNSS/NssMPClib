@@ -5,12 +5,9 @@ server
 import unittest
 
 import NssMPC
+from NssMPC import Party2PC, PartyRuntime, SEMI_HONEST
 from NssMPC.config.configs import *
-from NssMPC.infra.mpc.party import Party2PC
-from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
 from NssMPC.protocols.semi_honest_2pc.multiplication import MatmulTriples
-from NssMPC.runtime.context import PartyRuntime
-from NssMPC.runtime.presets import SEMI_HONEST
 
 server = Party2PC(0, SEMI_HONEST)
 server.online()
@@ -142,13 +139,13 @@ class TestServer(unittest.TestCase):
     def test_exp(self):
         print("===============================================")
         print("明文数据", torch.exp(x))
-        share_z = AdditiveSecretSharing.exp(share_x)
+        share_z = share_x.exp()
         res_share_z = share_z.restore().convert_to_real_field()
         print(res_share_z)
         print("===============================================")
 
         print("明文数据先exp再求和", torch.sum(torch.exp(x), dim=-1))
-        share_z = AdditiveSecretSharing.exp(share_x)
+        share_z = share_x.exp()
         share_z = share_z.sum(dim=-1)
         res_share_z = share_z.restore().convert_to_real_field()
 
@@ -159,7 +156,7 @@ class TestServer(unittest.TestCase):
     def test_inv_sqrt(self):
         print("===============================================")
         print("明文数据", torch.rsqrt(y))
-        share_z = AdditiveSecretSharing.rsqrt(share_y)
+        share_z = share_y.rsqrt()
         print(share_z.restore().convert_to_real_field())
         res_share_z = torch.max((torch.rsqrt(y)) - share_z.restore().convert_to_real_field())
         assert torch.allclose(torch.rsqrt(y).to(res_share_z), res_share_z, atol=2e1, rtol=2e-1) == True

@@ -5,21 +5,15 @@ client
 import unittest
 
 import NssMPC
+from NssMPC import Party2PC, PartyRuntime, SEMI_HONEST
 from NssMPC.config.configs import DEBUG_LEVEL
-from NssMPC.infra.mpc.party import PartyCtx, Party2PC
-
 from NssMPC.protocols.semi_honest_2pc.multiplication import MatmulTriples
-from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
-from NssMPC.runtime.presets import SEMI_HONEST
-from NssMPC.runtime.context import PartyRuntime
 
 client = Party2PC(1, SEMI_HONEST)
 client.online()
 with PartyRuntime(client):
-    share_x=NssMPC.SecretTensor(src_id=0)
-    share_y=NssMPC.SecretTensor(src_id=0)
-
-    PartyCtx.set(client)
+    share_x = NssMPC.SecretTensor(src_id=0)
+    share_y = NssMPC.SecretTensor(src_id=0)
 
 
 class TestClient(unittest.TestCase):
@@ -99,14 +93,14 @@ class TestClient(unittest.TestCase):
         print("====================================")
 
     def test_exp(self):
-        share_z = AdditiveSecretSharing.exp(share_x)
+        share_z = share_x.exp()
         share_z.restore().convert_to_real_field()
 
-        share_z = AdditiveSecretSharing.exp(share_x)
+        share_z = share_x.exp()
         share_z = share_z.sum(dim=-1)
         print(share_z.restore().convert_to_real_field())
 
     def test_inv_sqrt(self):
-        share_z = AdditiveSecretSharing.rsqrt(share_y)
+        share_z = share_y.rsqrt()
         share_z.restore().convert_to_real_field()
         share_z.restore().convert_to_real_field()

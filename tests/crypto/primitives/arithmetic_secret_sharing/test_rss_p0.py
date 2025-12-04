@@ -5,12 +5,10 @@ from pathlib import Path
 
 import torch
 
+import NssMPC
+from NssMPC import PartyRuntime, SEMI_HONEST, Party3PC
 from NssMPC.config import DEVICE
-from NssMPC.infra.mpc.party import Party3PC
-from NssMPC.infra.tensor import RingTensor
 from NssMPC.infra.utils.debug_utils import bytes_convert
-from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing
-from NssMPC.runtime import PartyRuntime, SEMI_HONEST
 
 server = Party3PC(0, SEMI_HONEST)
 
@@ -29,22 +27,10 @@ server.online()
 def prepare_data(n):
     x = torch.rand(n).to(DEVICE)
     y = torch.rand(n).to(DEVICE)
-    x_ring = RingTensor.convert_to_ring(x)
-    shares_X = ReplicatedSecretSharing.share(x_ring)
 
-    server.send(1, shares_X[1])
-    server.send(2, shares_X[2])
-    share_x = shares_X[0]
+    share_x = NssMPC.SecretTensor(tensor=x)
+    share_y = NssMPC.SecretTensor(tensor=y)
 
-    y_ring = RingTensor.convert_to_ring(y)
-    shares_Y = ReplicatedSecretSharing.share(y_ring)
-
-    server.send(1, shares_Y[1])
-    server.send(2, shares_Y[2])
-    share_y = shares_Y[0]
-
-    share_x.party = server
-    share_y.party = server
     return share_x, share_y, x, y
 
 
