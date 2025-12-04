@@ -6,7 +6,7 @@ from typing import Tuple
 import torch
 
 from NssMPC.config import SCALE, SCALE_BIT, data_type
-from NssMPC.infra.mpc.param_provider.parameter import Parameter
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter
 from NssMPC.infra.mpc.party import Party, PartyCtx
 from NssMPC.infra.tensor import RingTensor
 from NssMPC.primitives.secret_sharing import AdditiveSecretSharing

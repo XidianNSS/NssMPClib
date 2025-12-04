@@ -4,3 +4,4 @@
 
 from NssMPC.primitives.secret_sharing.arithmetic import AdditiveSecretSharing, ReplicatedSecretSharing
 from NssMPC.primitives.secret_sharing.boolean import BooleanSecretSharing
+from NssMPC.primitives.secret_sharing.function import DPF, DCF, DICF, GrottoDICF, SigmaDICF

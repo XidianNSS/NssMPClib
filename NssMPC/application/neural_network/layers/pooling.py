@@ -8,11 +8,10 @@ This document defines different pooling methods: maximum pooling, average poolin
 import math
 
 import torch
-from NssMPC.infra.tensor import RingTensor
 
 from NssMPC.application.neural_network.functional.functional import img2col_for_pool
-
 from NssMPC.config import DEVICE, data_type
+from NssMPC.infra.tensor import RingTensor
 
 
 class SecMaxPool2d(torch.nn.Module):

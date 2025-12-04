@@ -1,7 +1,7 @@
 #  This file is part of the NssMPClib project.
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
-from NssMPC.primitives import ReplicatedSecretSharing
+from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing
 from NssMPC.protocols.honest_majority_3pc.mac_check import MAC_BUFFER
 
 

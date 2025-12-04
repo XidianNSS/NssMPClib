@@ -8,8 +8,8 @@ For reference, see the `paper <https://eprint.iacr.org/2016/695.pdf>`_.
 """
 from typing import Tuple
 
-from NssMPC import RingTensor
-from NssMPC.infra.mpc.param_provider.parameter import Parameter, ParameterRegistry
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter, ParameterRegistry
+from NssMPC.infra.tensor import RingTensor
 from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
 
 
@@ -30,7 +30,6 @@ class SelectLin(object):
 
     @staticmethod
     def eval_with_comm(x_shift: RingTensor, w: RingTensor, d: RingTensor, key: 'SelectLinKey') -> RingTensor:
-        from NssMPC.primitives import AdditiveSecretSharing
         w_shift = AdditiveSecretSharing(key.w) + w.flatten()
         d_shift = AdditiveSecretSharing(key.d) + d.flatten()
         length = w_shift.numel()

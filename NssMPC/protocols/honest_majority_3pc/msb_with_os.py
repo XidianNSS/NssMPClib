@@ -6,16 +6,16 @@
 The implementation is based on the work of `Fu J, Cheng K, Xia Y, et al. Private decision tree evaluation with malicious security via function secret sharing 2024: 310-330`.
 For reference, see the `paper <https://link.springer.com/chapter/10.1007/978-3-031-70890-9_16>`_.
 """
-from NssMPC import RingTensor
 from NssMPC.config import DEVICE
-from NssMPC.infra.mpc.param_provider.parameter import Parameter
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter
+from NssMPC.infra.mpc.party import PartyCtx
 from NssMPC.infra.mpc.party.party import Party3PC
+from NssMPC.infra.tensor import RingTensor
 from NssMPC.infra.utils.common_utils import list_rotate
 from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing
 from NssMPC.primitives.secret_sharing.function import VSigma, VSigmaKey
 from NssMPC.protocols.honest_majority_3pc.base import recon
 from NssMPC.protocols.semi_honest_2pc.b2a import b2a
-from NssMPC.infra.mpc.party import PartyCtx
 
 
 def msb_with_os_without_mac_check(x: ReplicatedSecretSharing, share_table=None, party: Party3PC = None):
@@ -165,7 +165,6 @@ class MACKey(Parameter):
         """
         table1 = RingTensor.ones([num_of_keys, 1])
 
-        from NssMPC.primitives import ReplicatedSecretSharing
         share_tables = ReplicatedSecretSharing.share(table1)
 
         mac_key = RingTensor.random([num_of_keys, 1])

@@ -9,10 +9,10 @@ from typing import Tuple
 
 import torch
 
-from NssMPC import RingTensor
 from NssMPC.config import DEVICE, data_type
-from NssMPC.infra.mpc.param_provider.parameter import Parameter
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter
 from NssMPC.infra.mpc.party import PartyCtx, Party
+from NssMPC.infra.tensor import RingTensor
 from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
 
 

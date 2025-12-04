@@ -16,7 +16,7 @@ These encoding schemes are used in secure multi-party computation (MPC) protocol
 to ensure the privacy and security of the shared data.
 """
 
-from NssMPC import RingTensor
+from NssMPC.infra.tensor import RingTensor
 
 
 def zero_encoding(x: RingTensor):

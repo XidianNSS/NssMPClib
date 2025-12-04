@@ -1,10 +1,11 @@
 from NssMPC.infra.mpc.party import Party3PC
-from NssMPC.runtime import PartyRuntime, HONEST_MAJORITY, SEMI_HONEST
+from NssMPC.runtime import PartyRuntime, SEMI_HONEST
 
 ns = [10 ** 3, 10 ** 4, 10 ** 5, 10 ** 6]
 
-client = Party3PC(party_id=2)
+client = Party3PC(2, SEMI_HONEST)
 client.online()
+
 
 def test_multiplication(share_x, share_y):
     share_z = share_x * share_y
@@ -24,7 +25,7 @@ def test_greater_equal(share_x, share_y):
 if __name__ == "__main__":
 
     for n in ns:
-        with PartyRuntime(client, SEMI_HONEST):
+        with PartyRuntime(client):
             # 准备测试数据
             share_x = client.recv(0)
             share_y = client.recv(0)

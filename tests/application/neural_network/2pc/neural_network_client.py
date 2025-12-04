@@ -2,13 +2,13 @@ import torch.utils.data
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import Subset
+
 import NssMPC.application.neural_network as nn
-from NssMPC.infra.utils.debug_utils import get_time
+from NssMPC import PartyRuntime, SEMI_HONEST
 from NssMPC.config import DEVICE, NN_path
-from NssMPC.infra.mpc.party import PartyCtx
-from NssMPC.runtime import PartyRuntime
+from NssMPC.infra.utils.debug_utils import get_time
 from data.AlexNet.Alexnet import AlexNet
-from NssMPC.runtime.presets import SEMI_HONEST
+
 # set server and client address
 if __name__ == '__main__':
     client = nn.party.PartyNeuralNetwork2PC(1, SEMI_HONEST)

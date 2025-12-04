@@ -67,9 +67,9 @@ print("Finished Training")
 
 if not os.path.exists(NN_path):
     os.makedirs(NN_path)
-torch.save(net.state_dict(), NN_path + '/AlexNet_CIFAR10.pkl')
+torch.save(net.state_dict(), NN_path / 'AlexNet_CIFAR10.pkl')
 
-net.load_state_dict(torch.load(NN_path + '/AlexNet_CIFAR10.pkl'))
+net.load_state_dict(torch.load(NN_path / 'AlexNet_CIFAR10.pkl'))
 start_time = time.time()
 
 with torch.no_grad():

@@ -9,7 +9,6 @@ from os import PathLike
 
 import torch
 import torch.nn.functional as F
-from torch import Tensor
 
 from NssMPC.config import BIT_LEN, DEVICE, data_type, DTYPE_MAPPING, DTYPE_SCALE_MAPPING, HALF_RING
 from NssMPC.infra.utils.cuda_utils import cuda_matmul, cuda_rotate

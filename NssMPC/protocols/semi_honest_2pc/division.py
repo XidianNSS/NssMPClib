@@ -3,10 +3,10 @@
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 from typing import Tuple
 
-from NssMPC import RingTensor
 from NssMPC.config import SCALE_BIT
-from NssMPC.infra.mpc.param_provider.parameter import Parameter, ParameterRegistry
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter, ParameterRegistry
 from NssMPC.infra.mpc.party import Party, PartyCtx
+from NssMPC.infra.tensor import RingTensor
 from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
 from NssMPC.primitives.secret_sharing.function import SigmaDICF, SigmaDICFKey
 from NssMPC.protocols.semi_honest_2pc.b2a import b2a
@@ -80,6 +80,7 @@ def secure_inv(x: AdditiveSecretSharing) -> AdditiveSecretSharing:
     e1 = e0 * e0
 
     return w * neg_exp2_k * (e0 + 1) * (e1 + 1)
+
 
 def get_neg_exp2_k(divisor: AdditiveSecretSharing, party: Party = None) -> RingTensor:
     """Computes the negative power of 2 for the normalization factor k.

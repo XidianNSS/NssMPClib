@@ -13,7 +13,7 @@ from copy import deepcopy
 from typing import Tuple, Type, Dict, Any
 
 from NssMPC.config import param_path
-from NssMPC.infra.mpc.param_provider import ParamProvider
+from NssMPC.infra.mpc.aux_parameter import ParamProvider
 
 
 class Register(object):

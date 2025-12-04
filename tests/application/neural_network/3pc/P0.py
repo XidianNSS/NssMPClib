@@ -3,7 +3,7 @@ import time
 import torch.utils.data
 
 import NssMPC.application.neural_network as nn
-from NssMPC import RingTensor
+from NssMPC.infra.tensor import RingTensor
 from NssMPC.application.neural_network.party import PartyNeuralNetWork3PC
 from NssMPC.protocols.honest_majority_3pc.base import share
 from NssMPC.runtime import SEMI_HONEST, PartyRuntime

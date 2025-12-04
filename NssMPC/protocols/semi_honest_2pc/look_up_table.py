@@ -3,9 +3,9 @@
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 from typing import Tuple
-from NssMPC import RingTensor
+
 from NssMPC.config import DEBUG_LEVEL, data_type
-from NssMPC.infra.mpc.param_provider.parameter import Parameter, ParameterRegistry
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter, ParameterRegistry
 from NssMPC.infra.tensor import RingTensor
 
 

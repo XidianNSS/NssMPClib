@@ -5,7 +5,7 @@
 from multiprocessing import Pipe
 from threading import Thread, Lock
 
-from NssMPC.infra.mpc.param_provider import BaseParamProvider
+from NssMPC.infra.mpc.aux_parameter.param_provider import BaseParamProvider
 
 
 class BufferThread(object):

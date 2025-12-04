@@ -4,10 +4,10 @@
 import os
 
 from NssMPC.config import SCALE, param_path, HALF_RING
-from NssMPC.infra.mpc.param_provider.parameter import Parameter
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter
 from NssMPC.infra.mpc.party import Party, PartyCtx
 from NssMPC.infra.tensor import RingTensor
-from NssMPC.primitives import ReplicatedSecretSharing
+from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing
 from NssMPC.protocols.honest_majority_3pc.base import open
 
 

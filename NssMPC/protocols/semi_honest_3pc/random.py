@@ -32,7 +32,6 @@ def rand(shape: Union[torch.Size, List[int]], party) -> ReplicatedSecretSharing:
         num_of_value *= d
     r_0 = party.prg_0.random(num_of_value)
     r_1 = party.prg_1.random(num_of_value)
-    from NssMPC.primitives import ReplicatedSecretSharing
     r = ReplicatedSecretSharing([r_0, r_1])
     r = r.reshape(shape)
     return r

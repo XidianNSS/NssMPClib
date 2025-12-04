@@ -18,12 +18,12 @@ transform = transforms.Compose([
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 train_set = torchvision.datasets.CIFAR10(root=NN_path, train=True, download=True,
-                                       transform=transform)
+                                         transform=transform)
 
 train_loader = torch.utils.data.DataLoader(train_set, batch_size=10, shuffle=True)
 
 test_set = torchvision.datasets.CIFAR10(root=NN_path, train=False, download=True,
-                                      transform=transform)
+                                        transform=transform)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=1000, shuffle=False)
 
 net = resnet34()
@@ -60,9 +60,9 @@ print("Finished Training")
 net.eval()
 if not os.path.exists(NN_path):
     os.makedirs(NN_path)
-torch.save(net.state_dict(), NN_path + '/ResNet34_CIFAR10.pkl')
+torch.save(net.state_dict(), NN_path / '/.pkl')
 
-net.load_state_dict(torch.load(NN_path + '/ResNet34_CIFAR10.pkl'))
+net.load_state_dict(torch.load(NN_path / 'ResNet34_CIFAR10.pkl'))
 start_time = time.time()
 
 with torch.no_grad():

@@ -5,7 +5,7 @@ from typing import Optional
 
 from NssMPC.infra.mpc.party import Party, PartyCtx
 from NssMPC.infra.tensor import RingTensor
-from NssMPC.primitives import ReplicatedSecretSharing
+from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing
 from NssMPC.protocols.semi_honest_3pc.random import rand, rand_like
 
 

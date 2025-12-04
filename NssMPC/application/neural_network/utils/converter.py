@@ -7,10 +7,11 @@ import os
 from collections import OrderedDict
 
 import torch
+import torch.nn.functional as F
 
 from NssMPC.application.neural_network.utils.model_compiler import sec_format
-from NssMPC.infra.tensor import RingTensor
 from NssMPC.config.configs import DEVICE
+from NssMPC.infra.tensor import RingTensor
 
 
 def share_model(model, share_type=22):
@@ -61,7 +62,7 @@ def share_model(model, share_type=22):
     if share_type == 22:
         from NssMPC.primitives.secret_sharing import AdditiveSecretSharing as ShareType
     elif share_type == 32:
-        from NssMPC.primitives import ReplicatedSecretSharing as ShareType
+        from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing as ShareType
     modify_bn_layers(model)
 
     param_dict_list = [OrderedDict() for _ in range(num_of_party)]
@@ -156,9 +157,9 @@ def share_data(*inputs, share_type=22):
     num_of_party = share_type // 10
 
     if share_type == 22:
-        from NssMPC.primitives import AdditiveSecretSharing as ShareType
+        from NssMPC.primitives.secret_sharing import AdditiveSecretSharing as ShareType
     elif share_type == 32:
-        from NssMPC.primitives import ReplicatedSecretSharing as ShareType
+        from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing as ShareType
 
     input_shares = [[] for _ in range(num_of_party)]
     for input_info in inputs:

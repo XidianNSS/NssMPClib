@@ -2,9 +2,8 @@
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
-from NssMPC.primitives import ReplicatedSecretSharing
 from NssMPC.infra.tensor import RingTensor
-from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
+from NssMPC.primitives.secret_sharing import AdditiveSecretSharing, ReplicatedSecretSharing
 
 
 def img2col_for_conv(img, k_size: int, stride: int):

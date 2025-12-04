@@ -13,6 +13,7 @@ at the beginning of the communication.
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 import torch
+
 from NssMPC.application.neural_network.functional.functional import torch2share
 
 

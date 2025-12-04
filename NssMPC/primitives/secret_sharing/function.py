@@ -4,8 +4,8 @@ import torch
 
 from NssMPC.config import *
 from NssMPC.config import PRG_TYPE, LAMBDA, DEVICE, HALF_RING, data_type, DEBUG_LEVEL
-from NssMPC.infra.mpc.param_provider import ParamProvider
-from NssMPC.infra.mpc.param_provider.parameter import Parameter
+from NssMPC.infra.mpc.aux_parameter import ParamProvider
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter
 from NssMPC.infra.mpc.party import Party3PC
 from NssMPC.infra.prg import PRG
 from NssMPC.infra.tensor import RingTensor

@@ -4,33 +4,23 @@ server
 """
 import unittest
 
-from NssMPC.infra.mpc.party import PartyCtx, Party2PC
-
-from NssMPC.protocols.semi_honest_2pc.multiplication import MatmulTriples
-
-from NssMPC.primitives import AdditiveSecretSharing
-from NssMPC import RingTensor
+import NssMPC
 from NssMPC.config.configs import *
-from NssMPC.runtime.presets import SEMI_HONEST
+from NssMPC.infra.mpc.party import Party2PC
+from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
+from NssMPC.protocols.semi_honest_2pc.multiplication import MatmulTriples
 from NssMPC.runtime.context import PartyRuntime
+from NssMPC.runtime.presets import SEMI_HONEST
 
-server = Party2PC(0,SEMI_HONEST)
+server = Party2PC(0, SEMI_HONEST)
 server.online()
 
 with PartyRuntime(server):
     x = torch.rand([10, 10]).to(DEVICE)
     y = torch.rand([10, 10]).to(DEVICE)
-    # x = torch.randint(0, 10, [10, 10]).to(DEVICE)
-    # y = torch.randint(0, 10, [10, 10]).to(DEVICE)
-    x_ring = RingTensor.convert_to_ring(x)
-    x_0, x_1 = AdditiveSecretSharing.share(x_ring, 2)
-    server.send(x_1)
-    share_x = x_0
 
-    y_ring = RingTensor.convert_to_ring(y)
-    y_0, y_1 = AdditiveSecretSharing.share(y_ring, 2)
-    server.send(y_1)
-    share_y = y_0
+    share_x = NssMPC.SecretTensor(tensor=x)
+    share_y = NssMPC.SecretTensor(tensor=y)
 
 
 class TestServer(unittest.TestCase):

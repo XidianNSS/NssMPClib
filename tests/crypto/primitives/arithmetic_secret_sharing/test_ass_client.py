@@ -4,22 +4,20 @@ client
 """
 import unittest
 
+import NssMPC
 from NssMPC.config.configs import DEBUG_LEVEL
 from NssMPC.infra.mpc.party import PartyCtx, Party2PC
 
 from NssMPC.protocols.semi_honest_2pc.multiplication import MatmulTriples
-from NssMPC.primitives import AdditiveSecretSharing
+from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
 from NssMPC.runtime.presets import SEMI_HONEST
 from NssMPC.runtime.context import PartyRuntime
 
 client = Party2PC(1, SEMI_HONEST)
 client.online()
 with PartyRuntime(client):
-    x_1 = client.recv()
-    share_x = x_1
-
-    y_1 = client.recv()
-    share_y = y_1
+    share_x=NssMPC.SecretTensor(src_id=0)
+    share_y=NssMPC.SecretTensor(src_id=0)
 
     PartyCtx.set(client)
 

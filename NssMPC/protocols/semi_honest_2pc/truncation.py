@@ -5,10 +5,10 @@ from typing import List, Tuple
 
 import torch
 
-from NssMPC import RingTensor
 from NssMPC.config import data_type, RING_MAX, DEBUG_LEVEL
-from NssMPC.infra.mpc.param_provider.parameter import Parameter
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter
 from NssMPC.infra.mpc.party import Party, PartyCtx
+from NssMPC.infra.tensor import RingTensor
 from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
 
 

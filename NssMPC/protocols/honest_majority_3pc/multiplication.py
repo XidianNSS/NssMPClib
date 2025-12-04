@@ -6,16 +6,16 @@ import os
 import torch
 
 from NssMPC.config import param_path, DEBUG_LEVEL, data_type, DEVICE, DTYPE
-from NssMPC.infra.mpc.param_provider.param_provider import FixedShapeProvider
-from NssMPC.infra.mpc.param_provider.parameter import Parameter
+from NssMPC.infra.mpc.aux_parameter.param_provider import FixedShapeProvider
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter
 from NssMPC.infra.mpc.party import Party, PartyCtx
 from NssMPC.infra.tensor import RingTensor
 from NssMPC.infra.utils.cuda_utils import cuda_matmul
-from NssMPC.primitives import ReplicatedSecretSharing
+from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing
 from NssMPC.protocols.honest_majority_3pc.base import open
 from NssMPC.protocols.honest_majority_3pc.mac_check import check_zero
-from NssMPC.protocols.semi_honest_3pc.truncate import truncate
 from NssMPC.protocols.semi_honest_3pc.multiplication import mul_with_out_trunc, matmul_with_out_trunc
+from NssMPC.protocols.semi_honest_3pc.truncate import truncate
 
 
 def v_mul(x: ReplicatedSecretSharing, y: ReplicatedSecretSharing, party: Party = None) -> ReplicatedSecretSharing:
@@ -93,7 +93,6 @@ def v_matmul(x: ReplicatedSecretSharing, y: ReplicatedSecretSharing,
     e = common_e_f[:x.numel()].reshape(x.shape)
     f = common_e_f[x.numel():].reshape(y.shape)
 
-    from NssMPC.primitives import ReplicatedSecretSharing
     mat_1 = ReplicatedSecretSharing([e @ b.item[0], e @ b.item[1]])
     mat_2 = ReplicatedSecretSharing([a.item[0] @ f, a.item[1] @ f])
 
@@ -289,7 +288,6 @@ class RssMatrixBeaverProvider(FixedShapeProvider):
                 b_tensor = RingTensor(b, dtype=DTYPE).to(DEVICE)
                 c_tensor = RingTensor(c, dtype=DTYPE).to(DEVICE)
 
-                from NssMPC.primitives import ReplicatedSecretSharing
                 a = ReplicatedSecretSharing([a_tensor, a_tensor])
                 b = ReplicatedSecretSharing([b_tensor, b_tensor])
                 c = ReplicatedSecretSharing([c_tensor, c_tensor])

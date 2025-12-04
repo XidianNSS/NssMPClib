@@ -3,12 +3,12 @@
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 from NssMPC.config import DEVICE
-from NssMPC.infra.tensor import RingTensor
-from NssMPC.primitives.secret_sharing.arithmetic import SecretSharingBase
 from NssMPC.infra.mpc.party import PartyCtx
+from NssMPC.infra.tensor import RingTensor
+from NssMPC.primitives.secret_sharing.arithmetic import SecretSharingScheme
 
 
-class BooleanSecretSharing(SecretSharingBase):
+class BooleanSecretSharing(SecretSharingScheme):
     """
     A class for Boolean secret sharing, supporting various operations over boolean secret shared RingTensor.
 
@@ -36,7 +36,7 @@ class BooleanSecretSharing(SecretSharingBase):
             >>> bss = BooleanSecretSharing(ring_tensor)
         """
         assert isinstance(ring_tensor, RingTensor), "ring_tensor must be a RingTensor"
-        super().__init__(ring_tensor)
+        self.item = ring_tensor
 
     @property
     def ring_tensor(self):

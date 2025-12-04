@@ -12,15 +12,15 @@ from multiprocessing import Pipe, Lock
 
 from NssMPC.config import DEBUG_LEVEL, BIT_LEN, DEVICE, SOCKET_TYPE
 from NssMPC.infra.mpc.communication import TensorPipeCommunicator
-from NssMPC.infra.mpc.param_provider.buffer_thread import BufferThread
+from NssMPC.infra.mpc.aux_parameter.buffer_thread import BufferThread
 from NssMPC.infra.prg import MT19937_PRG
 
 PartyCtx = contextvars.ContextVar('PartyCtx', default=None)
 
 if SOCKET_TYPE == 0:
-    from NssMPC.infra.mpc.communication import TensorPipeCommunicator as Communicator
+    pass
 else:
-    from NssMPC.infra.mpc.communication import MCommunicator as Communicator
+    pass
 
 
 class Party:

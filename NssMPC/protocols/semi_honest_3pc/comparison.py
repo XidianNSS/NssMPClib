@@ -5,7 +5,7 @@ from NssMPC.config import DEBUG_LEVEL
 from NssMPC.infra.mpc.party import Party, PartyCtx
 from NssMPC.infra.tensor.ring_tensor import RingTensor
 from NssMPC.infra.utils.common_utils import list_rotate
-from NssMPC.primitives import ReplicatedSecretSharing
+from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing
 from NssMPC.primitives.secret_sharing.function import SigmaDICF, SigmaDICFKey
 from NssMPC.protocols.semi_honest_3pc.b2a import bit_injection
 

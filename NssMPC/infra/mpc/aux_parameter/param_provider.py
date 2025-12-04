@@ -453,6 +453,7 @@ class FixedShapeProvider(BaseParamProvider):
         """
         shapes_str = '_'.join([str(shape) for shape in shapes])
         if saved_name is None:
+            from NssMPC.protocols.semi_honest_2pc.multiplication import MatmulTriples
             file_name = f"{MatmulTriples.__name__}_{shapes_str}_{self.party.party_id}.pth"
             file_path = param_path + f"{MatmulTriples.__name__}/"
 

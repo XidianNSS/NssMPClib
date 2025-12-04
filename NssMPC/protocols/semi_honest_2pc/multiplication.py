@@ -8,10 +8,9 @@ from typing import Iterator, List, Tuple, Union
 
 import torch
 
-from NssMPC import RingTensor
 from NssMPC.config import param_path, base_path, DEBUG_LEVEL, data_type, DEVICE, DTYPE
-from NssMPC.infra.mpc.param_provider.parameter import Parameter
-from NssMPC.infra.mpc.param_provider.param_provider import FixedShapeProvider
+from NssMPC.infra.mpc.aux_parameter.param_provider import FixedShapeProvider
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter
 from NssMPC.infra.mpc.party import Party, PartyCtx
 from NssMPC.infra.tensor import RingTensor
 from NssMPC.infra.utils.cuda_utils import cuda_matmul

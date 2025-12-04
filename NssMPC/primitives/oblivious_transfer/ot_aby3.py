@@ -9,9 +9,8 @@ For reference, see the `paper <https://eprint.iacr.org/2018/403.pdf>`_.
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
-from NssMPC import RingTensor
-
 from NssMPC.config import DEVICE
+from NssMPC.infra.tensor import RingTensor
 
 
 class OT(object):

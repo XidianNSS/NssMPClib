@@ -10,9 +10,10 @@ import warnings
 
 import torch
 
-from NssMPC.infra.mpc.party import SemiHonestCS, HonestMajorityParty, PartyCtx, Party
-from NssMPC.protocols.honest_majority_3pc import RssMatmulTriples
-from NssMPC.protocols.semi_honest_2pc import MatmulTriples
+from NssMPC import Party2PC, Party3PC, SEMI_HONEST, HONEST_MAJORITY
+from NssMPC.infra.mpc.party import PartyCtx, Party
+from NssMPC.protocols.honest_majority_3pc.multiplication import RssMatmulTriples
+from NssMPC.protocols.semi_honest_2pc.multiplication import MatmulTriples
 
 
 def beaver_for_conv(x, kernel, padding, stride, num_of_triples, party: Party = PartyCtx.get()):
@@ -48,9 +49,9 @@ def beaver_for_conv(x, kernel, padding, stride, num_of_triples, party: Party = P
     im2col_output_shape = torch.zeros([n, h_out * w_out, c * k * k]).shape
     reshaped_kernel_size = torch.zeros([1, c * k * k, f]).shape
     shapes = im2col_output_shape, reshaped_kernel_size
-    if isinstance(party, SemiHonestCS):
+    if isinstance(party, Party2PC):
         return MatmulTriples.gen(num_of_triples, shapes[0], shapes[1])
-    elif isinstance(party, HonestMajorityParty):
+    elif isinstance(party, Party3PC) and party.thread_model_cfg == HONEST_MAJORITY:
         return RssMatmulTriples.gen(num_of_triples, shapes[0], shapes[1])
     else:
         warnings.warn("Maybe this party do not need to generate beaver triples.")
@@ -83,9 +84,9 @@ def beaver_for_linear(x, weight, num_of_triples, party: Party = PartyCtx.get()):
     """
 
     weight = weight.T
-    if isinstance(party, SemiHonestCS):
+    if isinstance(party, Party2PC):
         return MatmulTriples.gen(num_of_triples, x.shape, weight.shape)
-    elif isinstance(party, HonestMajorityParty):
+    elif isinstance(party, Party3PC) and party.thread_model_cfg == HONEST_MAJORITY:
         return RssMatmulTriples.gen(num_of_triples, x.shape, weight.shape)
     else:
         warnings.warn("Maybe this party do not need to generate beaver triples.")
@@ -116,9 +117,9 @@ def beaver_for_avg_pooling(x, kernel_shape, padding, stride, num_of_triples, par
     h_out = (h + 2 * padding - kernel_shape) // stride + 1
     w_out = (w + 2 * padding - kernel_shape) // stride + 1
     shapes = torch.zeros([n, c, h_out * w_out, kernel_shape * kernel_shape]).shape
-    if isinstance(party, SemiHonestCS):
+    if isinstance(party, Party2PC):
         return MatmulTriples.gen(num_of_triples, shapes, torch.zeros([shapes[3], 1]).shape)
-    elif isinstance(party, HonestMajorityParty):
+    elif isinstance(party, Party3PC) and party.thread_model_cfg == HONEST_MAJORITY:
         return RssMatmulTriples.gen(num_of_triples, shapes, torch.zeros([shapes[3], 1]).shape)
     else:
         warnings.warn("Maybe this party do not need to generate beaver triples.")

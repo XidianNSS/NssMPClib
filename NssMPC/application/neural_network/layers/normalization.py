@@ -6,6 +6,7 @@ The SecLayerNorm class is used to implement layer normalization.
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 import torch
+
 from NssMPC.application.neural_network.functional.functional import torch2share
 from NssMPC.config import data_type
 

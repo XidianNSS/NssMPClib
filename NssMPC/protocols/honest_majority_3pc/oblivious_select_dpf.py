@@ -6,12 +6,12 @@
 The implementation is based on the `work of Bai J, Song X, Zhang X, et al. Mostree: Malicious Secure Private Decision Tree Evaluation with Sublinear Communication 2023: 799-813`.
 For reference, see the `paper <https://dl.acm.org/doi/abs/10.1145/3627106.3627131>`_.
 """
-from NssMPC import RingTensor
-from NssMPC.infra.mpc.param_provider import ParamProvider
-from NssMPC.infra.mpc.param_provider.parameter import Parameter
+from NssMPC.infra.mpc.aux_parameter import ParamProvider
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter
 from NssMPC.infra.mpc.party import PartyCtx, Party3PC
+from NssMPC.infra.tensor import RingTensor
 from NssMPC.infra.utils.common_utils import list_rotate
-from NssMPC.primitives import ReplicatedSecretSharing
+from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing
 from NssMPC.primitives.secret_sharing.function import VDPF, VDPFKey
 from NssMPC.protocols.honest_majority_3pc.base import recon
 
@@ -22,7 +22,8 @@ class ObliviousSelect(object):
         pass
 
     @staticmethod
-    def selection(table: ReplicatedSecretSharing, idx: ReplicatedSecretSharing,party:Party3PC=None) -> ReplicatedSecretSharing:
+    def selection(table: ReplicatedSecretSharing, idx: ReplicatedSecretSharing,
+                  party: Party3PC = None) -> ReplicatedSecretSharing:
         """
         Performs oblivious selection from a table using the index.
 
@@ -96,6 +97,7 @@ class VOSKey(Parameter):
     """
     Parameter class for VOS keys.
     """
+
     def __init__(self, r00=None, k00=VDPFKey()):
         """
         Initializes VOSKey.

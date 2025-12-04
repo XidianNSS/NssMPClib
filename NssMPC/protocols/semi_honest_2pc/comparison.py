@@ -8,12 +8,12 @@ import random
 import re
 from typing import Tuple, List, Iterator
 
-from NssMPC import RingTensor
 from NssMPC.config import BIT_LEN, DEVICE
-from NssMPC.infra.mpc.param_provider.parameter import Parameter, param_path
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter, param_path
 from NssMPC.infra.mpc.party import PartyCtx
 from NssMPC.infra.mpc.party.party import Party
-from NssMPC.primitives import Paillier
+from NssMPC.infra.tensor import RingTensor
+from NssMPC.primitives.homomorphic_encryption import Paillier
 from NssMPC.primitives.secret_sharing.arithmetic import AdditiveSecretSharing
 from NssMPC.primitives.secret_sharing.function import DICF, DPF, DICFKey, GrottoDICF, GrottoDICFKey, SigmaDICF, \
     SigmaDICFKey

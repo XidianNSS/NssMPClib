@@ -138,10 +138,7 @@ def count_bytes(a):
         >>> size = count_bytes(my_tensor)
     """
     from NssMPC.infra.tensor import RingTensor
-    from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
-    from NssMPC.primitives import ReplicatedSecretSharing
-    from NssMPC.primitives.secret_sharing import BooleanSecretSharing
-
+    from NssMPC.primitives.secret_sharing import AdditiveSecretSharing, ReplicatedSecretSharing, BooleanSecretSharing
     if isinstance(a, torch.Tensor):
         return a.element_size() * a.nelement()
     elif isinstance(a, RingTensor):

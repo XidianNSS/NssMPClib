@@ -3,18 +3,8 @@
 import torch
 
 from NssMPC.config import SCALE
-# from NssMPC.protocols.semi_honest_2pc.base import add_public_value
-# from NssMPC.protocols.honest_majority_3pc import v_mul, v_matmul, \
-#     secure_ge as v_secure_ge, truncate
-# from NssMPC.protocols.semi_honest_2pc import beaver_mul, secure_matmul, \
-#     secure_div, secure_eq, secure_ge, secure_exp, secure_reciprocal_sqrt, truncate, secure_tanh
-# from NssMPC.protocols.semi_honest_3pc import mul_with_out_trunc, matmul_with_out_trunc, \
-#     secure_ge
 from NssMPC.infra.mpc.party import PartyCtx, Party
 from NssMPC.infra.tensor import RingTensor
-
-
-# from NssMPC.runtime.party import HonestMajorityParty
 
 
 #  This file is part of the NssMPClib project.
@@ -56,7 +46,7 @@ def methods_delegate():
             return delegate
 
         for name in RingTensor.__dict__.keys():
-            if name not in cls.__dict__ and callable(getattr(RingTensor, name)):
+            if name not in dir(cls) and callable(getattr(RingTensor, name)):
                 setattr(cls, name, create_delegated_method(name))
 
         return cls
@@ -240,12 +230,54 @@ class RingPair:
         else:
             self._item_1 = value
 
+    def __add__(self, other):
+        return RingPair(self._item_0 + other._item_0, self._item_1 + other._item_1)
+
+    def __sub__(self, other):
+        return RingPair(self._item_0 - other._item_0, self._item_1 - other._item_1)
+
+
+class ProtocolMixin:
+    """
+    a mixin class for protocol methods
+    """
+
+    def _add_public_value(self, other):
+        raise NotImplementedError
+
+    def _mul(self, other):
+        raise NotImplementedError
+
+    def _matmul(self, other):
+        raise NotImplementedError
+
+    def _div(self, other):
+        raise NotImplementedError
+
+    def _trunc(self, scale: int = SCALE):
+        raise NotImplementedError
+
+    def _eq(self, other):
+        raise NotImplementedError
+
+    def _ge(self, other):
+        raise NotImplementedError
+
+    def exp(self):
+        raise NotImplementedError
+
+    def rsqrt(self):
+        raise NotImplementedError
+
+    def tanh(self):
+        raise NotImplementedError
+
 
 @auto_delegate(
     methods=['numel', 'tolist', '__neg__', '__xor__', 'reshape', 'view', 'transpose', 'squeeze', 'unsqueeze', 'flatten',
              'clone', 'pad', 'sum', 'repeat', 'repeat_interleave', 'permute', 'to', 'contiguous', 'expand',
              'index_select', 'load_from_file'])
-class SecretSharingBase:
+class SecretSharingScheme(ProtocolMixin):
     """Base class for arithmetic operations with auto-delegation.
 
     This base class is designed for arithmetic operations, where most properties and methods
@@ -255,17 +287,6 @@ class SecretSharingBase:
     Args:
         item (RingTensor or RingPair): The `RingTensor` instance used for arithmetic operations.
     """
-
-    def __init__(self, item):
-        """Initialize an ArithmeticBase instance.
-
-        Args:
-            item (RingTensor or RingPair): The `RingTensor` instance used for arithmetic operations.
-
-        Examples:
-            >>> ss = SecretSharingBase(item)
-        """
-        self.item = item
 
     @property
     def dtype(self) -> str:
@@ -356,7 +377,7 @@ class SecretSharingBase:
         """Returns an ASS instance with its dimensions reversed.
 
         Returns:
-            SecretSharingBase: Transposed instance.
+            SecretSharingScheme: Transposed instance.
 
         Examples:
             >>> ss_t = ss.T
@@ -370,7 +391,7 @@ class SecretSharingBase:
             item (int): The position of the element to retrieve.
 
         Returns:
-            SecretSharingBase: The element at the specified index.
+            SecretSharingScheme: The element at the specified index.
 
         Examples:
             >>> elem = ss[0]
@@ -382,7 +403,7 @@ class SecretSharingBase:
 
         Args:
             key (int): The position of the element to be set.
-            value (SecretSharingBase): The value to assign to the specified index.
+            value (SecretSharingScheme): The value to assign to the specified index.
 
         Raises:
             TypeError: If `value` is not of a supported type.
@@ -410,13 +431,113 @@ class SecretSharingBase:
         raise NotImplementedError
 
     def __add__(self, other):
-        raise NotImplementedError
+        """Adds an ASS object with another object.
+
+        Args:
+            other (AdditiveSecretSharing or RingTensor or int or float): The object to add.
+
+        Returns:
+            AdditiveSecretSharing: The result of addition.
+
+        Raises:
+            TypeError: If `other` is not of a supported type.
+
+        Examples:
+            >>> res = ass + other
+        """
+        if isinstance(other, self.__class__):
+            return self.__class__(self.item + other.item)
+        elif isinstance(other, RingTensor):  # for RingTensor or const number, only party 0 add it to the share tensor
+            return self._add_public_value(other)
+        elif isinstance(other, (int, float)):
+            return self + RingTensor.convert_to_ring(int(other * self.scale))
+        else:
+            raise TypeError(f"unsupported operand type(s) for + '{type(self)}' and {type(other)}")
 
     def __sub__(self, other):
-        raise NotImplementedError
+        """Subtracts an object from an ASS object.
+
+        Args:
+            other (AdditiveSecretSharing or RingTensor or int or float): The object to subtract.
+
+        Returns:
+            AdditiveSecretSharing: The result of subtraction.
+
+        Raises:
+            TypeError: If `other` is not of a supported type.
+
+        Examples:
+            >>> res = ss - other
+        """
+        if isinstance(other, self.__class__):
+            new_tensor = self.item - other.item
+            return self.__class__(new_tensor)
+        elif isinstance(other, RingTensor):
+            return self._add_public_value(-other)
+        elif isinstance(other, (int, float)):
+            return self - RingTensor.convert_to_ring(int(other * self.scale))
+        else:
+            raise TypeError(f"unsupported operand type(s) for - '{type(self)}' and {type(other)}")
+
+    __radd__ = __add__
+
+    def __rsub__(self, other):
+        return -(self - other)
+
+    def __iadd__(self, other):
+        """In-place addition.
+
+        Args:
+            other (AdditiveSecretSharing or RingTensor or int or float): The object to add.
+
+        Returns:
+            AdditiveSecretSharing: The result of in-place addition.
+
+        Raises:
+            TypeError: If `other` is not of a supported type.
+
+        Examples:
+            >>> ass += other
+        """
+        if isinstance(other, self.__class__):
+            self.item += other.item
+        elif isinstance(other, RingTensor):
+            self.item = self._add_public_value(other).item
+        elif isinstance(other, (int, float)):
+            self.item += RingTensor.convert_to_ring(int(other * self.scale))
+        else:
+            raise TypeError(f"unsupported operand type(s) for += '{type(self)}' and {type(other)}")
+        return self
+
+    def __isub__(self, other):
+        """In-place subtraction.
+
+        Args:
+            other (AdditiveSecretSharing or RingTensor or int or float): The object to subtract.
+
+        Returns:
+            AdditiveSecretSharing: The result of in-place subtraction.
+
+        Raises:
+            TypeError: If `other` is not of a supported type.
+
+        Examples:
+            >>> ass -= other
+        """
+        if isinstance(other, self.__class__):
+            self.item -= other.item
+        elif isinstance(other, RingTensor):
+            self.item = self._add_public_value(-other).item
+        elif isinstance(other, (int, float)):
+            self.item -= RingTensor.convert_to_ring(int(other * self.scale))
+        else:
+            raise TypeError(f"unsupported operand type(s) for -= '{type(self)}' and {type(other)}")
+        return self
 
     def __mul__(self, other):
         raise NotImplementedError
+
+    __rmul__ = __mul__
 
     def __matmul__(self, other):
         raise NotImplementedError
@@ -440,16 +561,82 @@ class SecretSharingBase:
         raise NotImplementedError
 
     def __ge__(self, other):
-        raise NotImplementedError
+        """Compares if the SS instance is greater than or equal to `other`.
+
+        This method compares the current instance with another SS instance,
+        a RingTensor, or an integer/float for a greater than or equal relationship with the secure_ge protocol.
+
+        Args:
+            other (SecretSharing or RingTensor or int or float): The object to compare against.
+
+        Returns:
+            SecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
+
+        Raises:
+            TypeError: If `other` is not of a supported type.
+
+        Examples:
+            >>> res = st >= other
+        """
+        if isinstance(other, (self.__class__, RingTensor)):
+            return self._ge(other)
+        elif isinstance(other, int):
+            return self._ge(RingTensor.convert_to_ring(int(other * self.scale)))
+        elif isinstance(other, float):
+            assert self.dtype == 'float', "only float can compare with float"
+            return self._ge(RingTensor.convert_to_ring(other))
+        else:
+            raise TypeError(f"unsupported operand type(s) for comparison '{type(self)}' and {type(other)}")
 
     def __le__(self, other):
-        raise NotImplementedError
+        """Compares if the RSS instance is less than or equal to `other`.
+
+        This method performs the comparison by negating the `__ge__` logic.
+
+        Args:
+            other (ReplicatedSecretSharing or RingTensor or int or float): The object to compare against.
+
+        Returns:
+            ReplicatedSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
+
+        Examples:
+            >>> res = rss <= other
+        """
+        return -self >= -other
 
     def __gt__(self, other):
-        raise NotImplementedError
+        """Compares if the RSS instance is greater than `other`.
+
+        This method is based on the `__le__` comparison.
+
+        Args:
+            other (ReplicatedSecretSharing or RingTensor or int or float): The object to compare against.
+
+        Returns:
+            ReplicatedSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
+
+        Examples:
+            >>> res = rss > other
+        """
+        le = self <= other
+        return -(le - 1)
 
     def __lt__(self, other):
-        raise NotImplementedError
+        """Compares if the ArithmeticSecretSharing instance is less than `other`.
+
+        This method is based on the `__ge__` comparison.
+
+        Args:
+            other (ReplicatedSecretSharing or RingTensor or int or float): The object to compare against.
+
+        Returns:
+            ReplicatedSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
+
+        Examples:
+            >>> res = rss < other
+        """
+        ge = self >= other
+        return -(ge - 1)
 
     @classmethod
     def load_from_file(cls, file_path):
@@ -462,7 +649,7 @@ class SecretSharingBase:
             RingTensor: The ArithmeticBase object loaded from the file.
 
         Examples:
-            >>> obj = SecretSharingBase.load_from_file("path/to/file")
+            >>> obj = SecretSharingScheme.load_from_file("path/to/file")
         """
         result = RingTensor.load_from_file(file_path)
         return result
@@ -491,24 +678,24 @@ class SecretSharingBase:
         If **dim** is not specified, this method will return the maximum value over the entire input.
 
         Args:
-            x (SecretSharingBase): Input on which to compute the maximum.
+            x (SecretSharingScheme): Input on which to compute the maximum.
             dim (int, optional): The dimension along which to compute the maximum. If None, computes the maximum over the entire tensor. Defaults to None.
 
         Returns:
-            SecretSharingBase: The maximum value(s) in the tensor along the specified dimension or overall.
+            SecretSharingScheme: The maximum value(s) in the tensor along the specified dimension or overall.
 
         Examples:
-            >>> m = SecretSharingBase.max(x, dim=0)
+            >>> m = SecretSharingScheme.max(x, dim=0)
         """
 
         def max_iterative(inputs):
             """Iteratively computes the maximum by comparing pairs of elements.
 
             Args:
-                inputs (SecretSharingBase): The input for which the maximum will be computed iteratively.
+                inputs (SecretSharingScheme): The input for which the maximum will be computed iteratively.
 
             Returns:
-                SecretSharingBase: The maximum value from the input tensor.
+                SecretSharingScheme: The maximum value from the input tensor.
             """
             while inputs.shape[0] > 1:
                 if inputs.shape[0] % 2 == 1:
@@ -606,7 +793,7 @@ class SecretSharingBase:
         raise NotImplementedError
 
 
-class AdditiveSecretSharing(SecretSharingBase):
+class AdditiveSecretSharing(SecretSharingScheme):
     """A class for arithmetic secret sharing over a RingTensor.
 
     This class extends ArithmeticBase and provides methods for performing
@@ -627,7 +814,7 @@ class AdditiveSecretSharing(SecretSharingBase):
             >>> ass = AdditiveSecretSharing(rt)
         """
         assert isinstance(ring_tensor, RingTensor), "ring_tensor must be a RingTensor"
-        super().__init__(ring_tensor)
+        self.item = ring_tensor
 
     @property
     def ring_tensor(self):
@@ -673,110 +860,6 @@ class AdditiveSecretSharing(SecretSharingBase):
         else:
             raise TypeError(f"unsupported operand type(s) for setitem '{type(self)}' and {type(value)}")
 
-    def __add__(self, other):
-        """Adds an ASS object with another object.
-
-        Args:
-            other (AdditiveSecretSharing or RingTensor or int or float): The object to add.
-
-        Returns:
-            AdditiveSecretSharing: The result of addition.
-
-        Raises:
-            TypeError: If `other` is not of a supported type.
-
-        Examples:
-            >>> res = ass + other
-        """
-        if isinstance(other, AdditiveSecretSharing):
-            return AdditiveSecretSharing(self.item + other.item)
-        elif isinstance(other, RingTensor):  # for RingTensor or const number, only party 0 add it to the share tensor
-            return self._add_public_value(other)
-        elif isinstance(other, (int, float)):
-            return self + RingTensor.convert_to_ring(int(other * self.scale))
-        else:
-            raise TypeError(f"unsupported operand type(s) for + '{type(self)}' and {type(other)}")
-
-    __radd__ = __add__
-
-    def __iadd__(self, other):
-        """In-place addition.
-
-        Args:
-            other (AdditiveSecretSharing or RingTensor or int or float): The object to add.
-
-        Returns:
-            AdditiveSecretSharing: The result of in-place addition.
-
-        Raises:
-            TypeError: If `other` is not of a supported type.
-
-        Examples:
-            >>> ass += other
-        """
-        if isinstance(other, AdditiveSecretSharing):
-            self.item += other.item
-        elif isinstance(other, RingTensor):
-            self.item = self._add_public_value(other).item
-        elif isinstance(other, (int, float)):
-            self.item += RingTensor.convert_to_ring(int(other * self.scale))
-        else:
-            raise TypeError(f"unsupported operand type(s) for += '{type(self)}' and {type(other)}")
-        return self
-
-    def __sub__(self, other):
-        """Subtracts an object from an ASS object.
-
-        Args:
-            other (AdditiveSecretSharing or RingTensor or int or float): The object to subtract.
-
-        Returns:
-            AdditiveSecretSharing: The result of subtraction.
-
-        Raises:
-            TypeError: If `other` is not of a supported type.
-
-        Examples:
-            >>> res = ass - other
-        """
-        if isinstance(other, AdditiveSecretSharing):
-            new_tensor = self.item - other.item
-            return AdditiveSecretSharing(new_tensor)
-        elif isinstance(other, RingTensor):
-            return self._add_public_value(-other)
-        elif isinstance(other, (int, float)):
-            return self - RingTensor.convert_to_ring(int(other * self.scale))
-        else:
-            raise TypeError(f"unsupported operand type(s) for - '{type(self)}' and {type(other)}")
-
-    def __rsub__(self, other):
-        return -(self - other)
-
-    def __isub__(self, other):
-        """In-place subtraction.
-
-        Args:
-            other (AdditiveSecretSharing or RingTensor or int or float): The object to subtract.
-
-        Returns:
-            AdditiveSecretSharing: The result of in-place subtraction.
-
-        Raises:
-            TypeError: If `other` is not of a supported type.
-
-        Examples:
-            >>> ass -= other
-        """
-        if isinstance(other, AdditiveSecretSharing):
-            self.item -= other.item
-        elif isinstance(other, RingTensor):
-            self.item = self._add_public_value(-other).item
-        elif isinstance(other, (int, float)):
-            self.item -= RingTensor.convert_to_ring(int(other * self.scale))
-        else:
-            raise TypeError(f"unsupported operand type(s) for -= '{type(self)}' and {type(other)}")
-        return self
-
     def __mul__(self, other):
         """Multiplies an ASS object with a corresponding type.
 
@@ -807,8 +890,6 @@ class AdditiveSecretSharing(SecretSharingBase):
             raise TypeError(f"unsupported operand type(s) for * '{type(self)}' and {type(other)}")
 
         return res / self.scale
-
-    __rmul__ = __mul__
 
     def __matmul__(self, other):
         """Performs matrix multiplication between an ASS object with a corresponding type.
@@ -941,84 +1022,6 @@ class AdditiveSecretSharing(SecretSharingBase):
             return self._eq(RingTensor.convert_to_ring(other))
         else:
             raise TypeError(f"unsupported operand type(s) for comparison '{type(self)}' and {type(other)}")
-
-    def __ge__(self, other):
-        """Compares if the ASS instance is greater than or equal to `other`.
-
-        This method compares the current instance with another ASS instance,
-        a RingTensor, or an integer/float for a greater than or equal relationship with the secure_ge protocol.
-
-        Args:
-            other (AdditiveSecretSharing or RingTensor or int or float): The object to compare against.
-
-        Returns:
-            AdditiveSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
-
-        Raises:
-            TypeError: If `other` is not of a supported type.
-
-        Examples:
-            >>> res = ass >= other
-        """
-        if isinstance(other, (AdditiveSecretSharing, RingTensor)):
-            return self._ge(other)
-        elif isinstance(other, int):
-            return self._ge(RingTensor.convert_to_ring(int(other * self.scale)))
-        elif isinstance(other, float):
-            assert self.dtype == 'float', "only float can compare with float"
-            return self._ge(RingTensor.convert_to_ring(other))
-        else:
-            raise TypeError(f"unsupported operand type(s) for comparison '{type(self)}' and {type(other)}")
-
-    def __le__(self, other):
-        """Compares if the ASS instance is less than or equal to `other`.
-
-        This method performs the comparison by negating the `__ge__` logic.
-
-        Args:
-            other (AdditiveSecretSharing or RingTensor or int or float): The object to compare against.
-
-        Returns:
-            AdditiveSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
-
-        Examples:
-            >>> res = ass <= other
-        """
-        return -self >= -other
-
-    def __gt__(self, other):
-        """Compares if the ArithmeticSecretSharing instance is greater than `other`.
-
-        This method is based on the `__le__` comparison.
-
-        Args:
-            other (AdditiveSecretSharing or RingTensor or int or float): The object to compare against.
-
-        Returns:
-            AdditiveSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
-
-        Examples:
-            >>> res = ass > other
-        """
-        le = self <= other
-        return -(le - 1)
-
-    def __lt__(self, other):
-        """Compares if the ArithmeticSecretSharing instance is less than `other`.
-
-        This method is based on the `__ge__` comparison.
-
-        Args:
-            other (AdditiveSecretSharing or RingTensor or int or float): The object to compare against.
-
-        Returns:
-            AdditiveSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
-
-        Examples:
-            >>> res = ass < other
-        """
-        ge = self >= other
-        return -(ge - 1)
 
     @classmethod
     def cat(cls, tensor_list, dim=0):
@@ -1188,7 +1191,7 @@ class AdditiveSecretSharing(SecretSharingBase):
         return share
 
 
-class ReplicatedSecretSharing(SecretSharingBase):
+class ReplicatedSecretSharing(SecretSharingScheme):
     """A class for replicated secret sharing over a RingPair.
 
     This class extends ArithmeticBase and provides methods for performing
@@ -1210,7 +1213,7 @@ class ReplicatedSecretSharing(SecretSharingBase):
         """
         if isinstance(ring_pair, list):
             ring_pair = RingPair(ring_pair[0], ring_pair[1])
-        super(ReplicatedSecretSharing, self).__init__(ring_pair)
+        self.item = ring_pair
 
     def __getitem__(self, item):
         """Enables indexing for the RSS instance.
@@ -1245,70 +1248,6 @@ class ReplicatedSecretSharing(SecretSharingBase):
         else:
             raise TypeError(f"unsupported operand type(s) for setitem '{type(self)}' and {type(value)}")
 
-    def __str__(self):
-        """Returns a string representation of the RSS instance.
-
-        Returns:
-            str: A string that represents the RSS instance.
-
-        Examples:
-            >>> print(rss)
-        """
-        return f"[{self.__class__.__name__}\n {self.item}]"
-
-    def __add__(self, other):
-        """Adds an RSS object with a corresponding type.
-
-        Args:
-            other (ReplicatedSecretSharing or RingTensor or int or float): The object to be added.
-
-        Returns:
-            ReplicatedSecretSharing: A new RSS instance representing the result.
-
-        Raises:
-            TypeError: If `other` is not of a supported type.
-
-        Examples:
-            >>> res = rss + other
-        """
-        if isinstance(other, ReplicatedSecretSharing):
-            return ReplicatedSecretSharing(RingPair(self.item[0] + other.item[0], self.item[1] + other.item[1]))
-        elif isinstance(other, RingTensor):
-            return self._add_public_value(other)
-        elif isinstance(other, (int, float)):
-            return self + RingTensor.convert_to_ring(int(other * self.scale))
-        else:
-            raise TypeError("unsupported operand type(s) for + 'ReplicatedSecretSharing' and ", type(other))
-
-    __radd__ = __add__
-
-    def __sub__(self, other):
-        """Subtracts an RSS object with a corresponding type.
-
-        Args:
-            other (ReplicatedSecretSharing or RingTensor or int): The object to subtract.
-
-        Returns:
-            ReplicatedSecretSharing: A new RSS instance representing the result.
-
-        Raises:
-            TypeError: If `other` is not of a supported type.
-
-        Examples:
-            >>> res = rss - other
-        """
-        if isinstance(other, ReplicatedSecretSharing):
-            return ReplicatedSecretSharing(RingPair(self.item[0] - other.item[0], self.item[1] - other.item[1]))
-        elif isinstance(other, RingTensor):
-            return self._add_public_value(-other)
-        elif isinstance(other, int):
-            return self - RingTensor.convert_to_ring(int(other * self.scale))
-        else:
-            raise TypeError("unsupported operand type(s) for - 'ReplicatedSecretSharing' and ", type(other))
-
-    def __rsub__(self, other):
-        return -(self - other)
-
     def __mul__(self, other):
         """Multiplies an RSS object with a corresponding type.
 
@@ -1337,12 +1276,9 @@ class ReplicatedSecretSharing(SecretSharingBase):
                 return result._trunc()
             return result
         elif isinstance(other, int):
-            result = self.item * other
-            return ReplicatedSecretSharing(result)
+            return ReplicatedSecretSharing(self.item * other)
         else:
             raise TypeError("unsupported operand type(s) for * 'ReplicatedSecretSharing' and ", type(other))
-
-    __rmul__ = __mul__
 
     def __matmul__(self, other):
         """Performs matrix multiplication between an RSS object with a corresponding type.
@@ -1389,84 +1325,6 @@ class ReplicatedSecretSharing(SecretSharingBase):
             return result
         else:
             raise TypeError("unsupported operand type(s) for @ 'ReplicatedSecretSharing' and ", type(other))
-
-    def __ge__(self, other):
-        """Compares if the RSS instance is greater than or equal to `other`.
-
-        This method compares the current instance with another RSS instance,
-        a RingTensor, or an integer/float for a greater than or equal relationship with the secure_ge protocol.
-
-        Args:
-            other (ReplicatedSecretSharing or RingTensor or int or float): The object to compare against.
-
-        Returns:
-            ReplicatedSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
-
-        Raises:
-            TypeError: If `other` is not of a supported type.
-
-        Examples:
-            >>> res = rss >= other
-        """
-        if isinstance(other, (ReplicatedSecretSharing, RingTensor)):
-            return self._ge(other)
-        elif isinstance(other, int):
-            return self >= RingTensor.convert_to_ring(int(other * self.scale))
-        elif isinstance(other, float):
-            assert self.dtype == 'float', "only float can compare with float"
-            return self >= RingTensor.convert_to_ring(other)
-        else:
-            raise TypeError(f"unsupported operand type(s) for comparison '{type(self)}' and {type(other)}")
-
-    def __le__(self, other):
-        """Compares if the RSS instance is less than or equal to `other`.
-
-        This method performs the comparison by negating the `__ge__` logic.
-
-        Args:
-            other (ReplicatedSecretSharing or RingTensor or int or float): The object to compare against.
-
-        Returns:
-            ReplicatedSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
-
-        Examples:
-            >>> res = rss <= other
-        """
-        return -self >= -other
-
-    def __gt__(self, other):
-        """Compares if the RSS instance is greater than `other`.
-
-        This method is based on the `__le__` comparison.
-
-        Args:
-            other (ReplicatedSecretSharing or RingTensor or int or float): The object to compare against.
-
-        Returns:
-            ReplicatedSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
-
-        Examples:
-            >>> res = rss > other
-        """
-        le = self <= other
-        return -(le - 1)
-
-    def __lt__(self, other):
-        """Compares if the ArithmeticSecretSharing instance is less than `other`.
-
-        This method is based on the `__ge__` comparison.
-
-        Args:
-            other (ReplicatedSecretSharing or RingTensor or int or float): The object to compare against.
-
-        Returns:
-            ReplicatedSecretSharing: The corresponding element will be 1 if the two values are equal, otherwise 0.
-
-        Examples:
-            >>> res = rss < other
-        """
-        ge = self >= other
-        return -(ge - 1)
 
     @classmethod
     def cat(cls, tensor_list, dim=0):
@@ -1688,33 +1546,3 @@ class ReplicatedSecretSharing(SecretSharingBase):
         if isinstance(x, (RingTensor, ReplicatedSecretSharing)):
             r.dtype = x.dtype
         return r
-
-    def _add_public_value(self, other):
-        raise NotImplementedError
-
-    def _mul(self, other):
-        raise NotImplementedError
-
-    def _matmul(self, other):
-        raise NotImplementedError
-
-    def _div(self, other):
-        raise NotImplementedError
-
-    def _trunc(self, scale: int = SCALE):
-        raise NotImplementedError
-
-    def _eq(self, other):
-        raise NotImplementedError
-
-    def _ge(self, other):
-        raise NotImplementedError
-
-    def exp(self):
-        raise NotImplementedError
-
-    def rsqrt(self):
-        raise NotImplementedError
-
-    def tanh(self):
-        raise NotImplementedError

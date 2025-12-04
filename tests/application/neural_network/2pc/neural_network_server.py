@@ -1,11 +1,12 @@
-import torch
-import NssMPC.application.neural_network as nn
-from NssMPC.infra.mpc.party import PartyCtx
-from NssMPC.runtime import PartyRuntime
-from data.AlexNet.Alexnet import AlexNet
-from NssMPC.config import NN_path
 import os
-from NssMPC.runtime.presets import SEMI_HONEST
+
+import torch
+
+import NssMPC.application.neural_network as nn
+from NssMPC.config import NN_path
+from NssMPC import PartyRuntime, SEMI_HONEST
+from data.AlexNet.Alexnet import AlexNet
+
 # set server and client address
 
 if __name__ == '__main__':
@@ -43,7 +44,7 @@ if __name__ == '__main__':
         #         with_modules=True        # 记录模块信息
         # ) as prof:
         #     inference_count = 0
-        while num :#and inference_count < 5:  # 限制分析次数
+        while num:  # and inference_count < 5:  # 限制分析次数
             shared_data = server.recv()
 
             # with record_function("full_inference"):

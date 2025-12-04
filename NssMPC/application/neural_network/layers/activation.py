@@ -5,14 +5,14 @@
 import torch
 
 from NssMPC.config import SCALE_BIT, GELU_TABLE_BIT, data_type, DEVICE, BIT_LEN, HALF_RING
-from NssMPC.infra.mpc.param_provider.parameter import Parameter, ParameterRegistry
+from NssMPC.infra.mpc.aux_parameter.parameter import Parameter, ParameterRegistry
+from NssMPC.infra.mpc.party import Party, PartyCtx
 from NssMPC.infra.tensor import RingTensor
 from NssMPC.primitives.secret_sharing import AdditiveSecretSharing
 from NssMPC.primitives.secret_sharing.function import SigmaDICFKey, DPFKey, SigmaDICF
 from NssMPC.protocols.semi_honest_2pc.b2a import b2a
 from NssMPC.protocols.semi_honest_2pc.look_up_table import LookUpKey, LookUp
 from NssMPC.protocols.semi_honest_2pc.selectlin import SelectLinKey, SelectLin
-from NssMPC.infra.mpc.party import Party,PartyCtx
 
 
 def _gelu_forward_cpu(x,party:Party=None):

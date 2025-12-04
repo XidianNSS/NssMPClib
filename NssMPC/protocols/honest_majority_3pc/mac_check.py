@@ -1,6 +1,6 @@
-from NssMPC import RingTensor
+from NssMPC.infra.tensor import RingTensor
 from NssMPC.infra.mpc.party import Party, PartyCtx
-from NssMPC.primitives import ReplicatedSecretSharing
+from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing
 from NssMPC.protocols.honest_majority_3pc.base import open, coin
 from NssMPC.protocols.semi_honest_3pc.multiplication import mul_with_out_trunc
 from NssMPC.protocols.semi_honest_3pc.random import rand_like
@@ -51,11 +51,9 @@ class MacBuffer:
         Examples:
             >>> buffer.check()
         """
-        from NssMPC.primitives import ReplicatedSecretSharing
         x = ReplicatedSecretSharing.cat(self.x)
         mac = ReplicatedSecretSharing.cat(self.mac)
         key = ReplicatedSecretSharing.cat(self.key)
-        from NssMPC.protocols import mac_check
         mac_check(x, mac, key)
         self.__init__()
 

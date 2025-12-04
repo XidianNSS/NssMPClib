@@ -4,8 +4,9 @@
 
 import torch
 import torchcsprng
-from NssMPC.infra.tensor import RingTensor
+
 from NssMPC.config import DEVICE, data_type, DTYPE
+from NssMPC.infra.tensor import RingTensor
 
 
 class PRG(object):

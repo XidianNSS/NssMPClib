@@ -8,7 +8,9 @@ are shared. For reference, see the `paper <https://maggichk.github.io/papers/son
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 
 import math
+
 import torch
+
 from NssMPC.application.neural_network.functional.functional import img2col_for_conv, torch2share
 from NssMPC.config import DEVICE
 

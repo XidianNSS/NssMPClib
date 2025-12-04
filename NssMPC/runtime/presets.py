@@ -13,12 +13,12 @@ from NssMPC.protocols.semi_honest_2pc import (
     reciprocal_sqrt
 )
 from NssMPC.protocols.semi_honest_2pc.base import add_public_value as add_public_value_2pc
-from NssMPC.protocols.semi_honest_3pc.base import add_public_value as add_public_value_3pc
 from NssMPC.protocols.semi_honest_3pc import (
     comparison as sh3pc_cmp,
     multiplication as sh3pc_mul,
     truncate as sh3pc_trunc,
 )
+from NssMPC.protocols.semi_honest_3pc.base import add_public_value as add_public_value_3pc
 
 SEMI_HONEST = {
     'additive': {

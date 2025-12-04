@@ -1,5 +1,5 @@
-from NssMPC.infra.tensor import RingTensor
 from NssMPC.infra.mpc.party import PartyCtx, Party
+from NssMPC.infra.tensor import RingTensor
 from NssMPC.primitives.secret_sharing import ReplicatedSecretSharing
 
 
