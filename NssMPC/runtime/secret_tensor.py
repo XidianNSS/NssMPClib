@@ -17,6 +17,12 @@ def SecretTensor(tensor: torch.Tensor = None,
 
     Returns:
         SecretSharingScheme: An arithmetic secret shared tensor.
+
+    Examples:
+        for data owner:
+        >>> share = SecretTensor(tensor=x)
+        for other parties:
+        >>> share = SecretTensor(src_id=0)
     """
     party = PartyCtx.get()
     if tensor is None and src_id is None:

@@ -11,8 +11,8 @@ from data.AlexNet.Alexnet import AlexNet
 
 if __name__ == '__main__':
     # 创建性能分析日志目录
-    log_dir = "./profiler_logs"
-    os.makedirs(log_dir, exist_ok=True)
+    # log_dir = "./profiler_logs"
+    # os.makedirs(log_dir, exist_ok=True)
 
     server = nn.party.PartyNeuralNetwork2PC(0, SEMI_HONEST)
     server.online()
