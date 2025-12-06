@@ -14,7 +14,6 @@ from NssMPC.protocols.semi_honest_2pc.tanh import TanhKey
 gen_num = 100
 
 AssMulTriples.gen_and_save(gen_num, num_of_party=2, type_of_generation='TTP')
-# AssMulTriples.gen_and_save(gen_num, saved_name='3PCBeaver', num_of_party=3, type_of_generation='TTP')
 BooleanTriples.gen_and_save(gen_num, num_of_party=2, type_of_generation='TTP')
 Wrap.gen_and_save(gen_num)
 GrottoDICFKey.gen_and_save(gen_num)

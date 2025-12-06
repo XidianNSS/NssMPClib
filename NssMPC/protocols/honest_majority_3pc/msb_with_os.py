@@ -58,10 +58,9 @@ def msb_with_os_without_mac_check(x: ReplicatedSecretSharing, share_table=None, 
     rdx1, k1, c1 = key_from_previous
     rdx0, k0, c0 = key_from_next
 
-    rdx_list = [x.__class__([self_rdx0.item, self_rdx1.item]),
-                x.__class__([RingTensor.convert_to_ring(0), rdx1.item]),
-                x.__class__([rdx0.item, RingTensor.convert_to_ring(0)])
-                ]
+    rdx_list = [ReplicatedSecretSharing([self_rdx0.item, self_rdx1.item]),
+                ReplicatedSecretSharing([RingTensor.convert_to_ring(0), rdx1.item]),
+                ReplicatedSecretSharing([rdx0.item, RingTensor.convert_to_ring(0)])]
 
     rdx_list = list_rotate(rdx_list, party.party_id)
 
@@ -113,8 +112,8 @@ def msb_with_os_without_mac_check(x: ReplicatedSecretSharing, share_table=None, 
     v = v1 + v2
     mac_v = mac_v1 + mac_v2
 
-    v = x.__class__.reshare(v, party)
-    mac_v = x.__class__.reshare(mac_v, party)
+    v = ReplicatedSecretSharing.reshare(v, party)
+    mac_v = ReplicatedSecretSharing.reshare(mac_v, party)
 
     return v.reshape(shape), mac_v.reshape(shape), mac_key
 

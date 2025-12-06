@@ -1581,7 +1581,7 @@ class VSigmaKey(Parameter):
         provider.load_param()
         party.virtual_party_with_previous.append_provider(provider)
 
-        provider = ParamProvider(cls, saved_name=f'VSigmaKey_{(party.party_id + 1) % 3}_1')
+        provider = ParamProvider(cls, saved_name=f'VSigmaKey_{(party.party_id - 1) % 3}_1')
         provider.load_param()
         party.virtual_party_with_next.append_provider(provider)
 
@@ -1660,7 +1660,6 @@ class VSigma(object):
         Examples:
             >>> res, pi = VSigma.cmp_eval(x, key, 0)
         """
-        from NssMPC import AdditiveSecretSharing
         if DEBUG_LEVEL == 2:
             x_shift = AdditiveSecretSharing(keys.r_in) + x
         else:
