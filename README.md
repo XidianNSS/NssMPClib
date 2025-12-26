@@ -12,10 +12,7 @@ NssMPClib is a comprehensive Secure Multi-Party Computation (MPC) library develo
 - **Multiple Secret Sharing Schemes**:
   - Additive Secret Sharing (2-party)
   - Replicated Secret Sharing (3-party)
-- **Function Secret Sharing (FSS)** implementations:
-  - Distributed Point Function (DPF)
-  - Distributed Comparison Function (DCF)
-  - Distributed Interval Containment Function (DICF) with multiple variants (Standard, GROTTO, SIGMA)
+- **Function Secret Sharing (FSS)** implementations with multiple variants:
 - **Privacy-Preserving Neural Network Inference**: Support for secure model evaluation
 - **Ring-based Computation**: All operations performed on finite rings for cryptographic security
 
@@ -45,39 +42,41 @@ python scripts/offline_parameter_generation.py
 
 ## Quick Start: 2-Party Computation Example
 
-**Server (Party 0) - `server.py`**:
+**Party 0 - `party_0.py`**:
+
 ```python
-from NssMPC import Party2PC, PartyRuntime, SEMI_HONEST, SecretTensor
+from nssmpc import Party2PC, PartyRuntime, SEMI_HONEST, SecretTensor
 import torch
 
-server = Party2PC(0, SEMI_HONEST)
-with PartyRuntime(server):
-    server.online()
+party = Party2PC(0, SEMI_HONEST)
+with PartyRuntime(party):
+    party.online()
     x = torch.rand([10, 10])
     share_x = SecretTensor(tensor=x)
-    result = share_x.restore().convert_to_real_field()
+    result = share_x.recon().convert_to_real_field()
     print("Server result:", result)
 ```
 
-**Client (Party 1) - `client.py`**:
+**Party 1 - `party_1.py`**:
+
 ```python
-from NssMPC import Party2PC, PartyRuntime, SEMI_HONEST, SecretTensor
+from nssmpc import Party2PC, PartyRuntime, SEMI_HONEST, SecretTensor
 
 client = Party2PC(1, SEMI_HONEST)
 with PartyRuntime(client):
     client.online()
     share_x = SecretTensor(src_id=0)
-    result = share_x.restore().convert_to_real_field()
+    result = share_x.recon().convert_to_real_field()
     print("Client result:", result)
 ```
 
 **Execution**:
 ```bash
 # Terminal 1: Start server
-python server.py
+python party_0.py
 
 # Terminal 2: Start client (in separate terminal)
-python client.py
+python party_1.py
 ```
 
 ## Running Built-in Examples
@@ -86,18 +85,18 @@ python client.py
 ```bash
 cd tests/primitives/secret_sharing/
 # Terminal 1:
-python -m unittest test_ass_server.py
+python -m unittest test_ass_p0.py
 # Terminal 2:
-python -m unittest test_ass_client.py
+python -m unittest test_ass_p1.py
 ```
 
 ### 2. Neural Network Inference (2-Party)
 ```bash
 cd tests/application/neural_network/2pc/
 # Terminal 1:
-python neural_network_server.py
+python neural_network_P0.py
 # Terminal 2:
-python neural_network_client.py
+python neural_network_P1.py
 ```
 
 ### 3. Replicated Secret Sharing (3-Party)
@@ -110,7 +109,7 @@ cd tests/primitives/secret_sharing/
 
 ## Configuration
 
-Configure the library in `NssMPC/config/configs.json`:
+Configure the library in `nssmpc/config/configs.json`:
 ```json
 {
     "BIT_LEN": 32,           // Ring size: 32 or 64 bits
@@ -135,7 +134,7 @@ Configure the library in `NssMPC/config/configs.json`:
 
 ```
 NssMPClib/
-├── NssMPC/                   # Main library source
+├── nssmpc/                   # Main library source
 │   ├── application/          # Privacy-preserving applications
 │   ├── config/              # Configuration files
 │   ├── infra/               # Infrastructure components

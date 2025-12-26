@@ -3,8 +3,8 @@ function_secret_sharing 测试
 """
 import unittest
 
-from NssMPC.infra.tensor import RingTensor
-from NssMPC.primitives.secret_sharing.function import prefix_parity_query, DCF, DPF, SigmaDICF, GrottoDICF, DICF
+from nssmpc.infra.tensor import RingTensor
+from nssmpc.primitives.secret_sharing.function import prefix_parity_query, DCF, DPF, SigmaDICF, GrottoDICF, DICF
 
 num_of_keys = 10  # We need a few keys for a few function values, but of course we can generate many keys in advance.
 

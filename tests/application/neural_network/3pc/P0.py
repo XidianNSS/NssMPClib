@@ -1,46 +1,33 @@
-import time
-
 import torch.utils.data
 
-import NssMPC.application.neural_network as nn
-from NssMPC.infra.tensor import RingTensor
-from NssMPC.application.neural_network.party import PartyNeuralNetWork3PC
-from NssMPC.protocols.honest_majority_3pc.base import share
-from NssMPC.runtime import SEMI_HONEST, PartyRuntime
-
+import nssmpc.application.neural_network as nn
+from nssmpc import Party3PC, SEMI_HONEST, PartyRuntime, SecretTensor, HONEST_MAJORITY
+from nssmpc.infra.utils.profiling import RuntimeTimer
 from data.AlexNet.Alexnet import AlexNet
 
-
-
 if __name__ == '__main__':
-    P = PartyNeuralNetWork3PC(0,SEMI_HONEST)
+    # P = Party3PC(0, SEMI_HONEST)
+    P = Party3PC(0, HONEST_MAJORITY)
     P.online()
     with PartyRuntime(P):
         test_input = torch.randint(-10, 10, [1, 3, 32, 32]) * 1.0
         print("test_input:", test_input)
-        net = AlexNet()
-        test_output = net(test_input)
+        plaintext_model = AlexNet()
+        test_output = plaintext_model(test_input)
         print("test_output", test_output)
-
-        print("开始分享权重")
-        shared_param = nn.utils.share_model(net, share_type=32)
-        local_param = shared_param[0]
-        P1_param = shared_param[1]
-        P2_param = shared_param[2]
-        P.send(1, P1_param)
-        P.send(2, P2_param)
-
-        print("预处理一些东西")
-        num = P.dummy_model(net, test_input)
-        net = nn.utils.load_model(net, local_param)
-
-        print("开始分享输入")
-
-        share_input = share(RingTensor.convert_to_ring(test_input), P)
-        print("share input", share_input.restore().convert_to_real_field())
-        for i in range(10):
-            st = time.time()
+        # Share model parameters
+        shared_param = nn.utils.share_model_param(model=plaintext_model)
+        # Convert to secure model class
+        SecAlexNet = nn.utils.convert_model(AlexNet)
+        # Instantiate secure model
+        ciphertext_model = SecAlexNet()
+        # Load shared parameters
+        net = nn.utils.load_shared_param(ciphertext_model, shared_param)
+        # Share input data
+        share_input = SecretTensor(tensor=test_input)
+        # Inference and profiling
+        with RuntimeTimer(enable_comm_stats=True):
             output = net(share_input)
-            et = time.time()
-            print("time cost", et - st)
-        print("output", output.restore().convert_to_real_field())
+        # Reconstruct output to Party 0 and print
+        print("output", output.recon(target_id=0).convert_to_real_field())
+    P.close()

@@ -2,8 +2,8 @@ import unittest
 
 import torch
 
-from NssMPC.config.configs import BIT_LEN, DEVICE
-from NssMPC.infra.tensor import RingTensor
+from nssmpc.config.configs import BIT_LEN, DEVICE
+from nssmpc.infra.tensor import RingTensor
 
 
 class TestRingTensor(unittest.TestCase):

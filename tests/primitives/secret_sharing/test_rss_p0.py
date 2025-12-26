@@ -5,10 +5,10 @@ from pathlib import Path
 
 import torch
 
-import NssMPC
-from NssMPC import PartyRuntime, SEMI_HONEST, Party3PC
-from NssMPC.config import DEVICE
-from NssMPC.infra.utils.debug_utils import bytes_convert
+import nssmpc
+from nssmpc import PartyRuntime, SEMI_HONEST, Party3PC
+from nssmpc.config import DEVICE
+from nssmpc.infra.utils.profiling import bytes_convert
 
 server = Party3PC(0, SEMI_HONEST)
 
@@ -28,8 +28,8 @@ def prepare_data(n):
     x = torch.rand(n).to(DEVICE)
     y = torch.rand(n).to(DEVICE)
 
-    share_x = NssMPC.SecretTensor(tensor=x)
-    share_y = NssMPC.SecretTensor(tensor=y)
+    share_x = nssmpc.SecretTensor(tensor=x)
+    share_y = nssmpc.SecretTensor(tensor=y)
 
     return share_x, share_y, x, y
 
@@ -48,7 +48,7 @@ def test_multiplication(share_x, share_y, x, y):
         # print(f"迭代测试乘法...{_}")
         share_z = share_x * share_y
     time2 = time.time()
-    res_share_z = share_z.restore().convert_to_real_field()
+    res_share_z = share_z.recon().convert_to_real_field()
     comparision_result = torch.allclose((x * y).to(res_share_z),
                                         res_share_z, atol=1e-2, rtol=1e-2)
     print("结果对比: ", comparision_result)

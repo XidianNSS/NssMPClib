@@ -1,0 +1,14 @@
+{
+  "BIT_LEN": 32,
+  "LAMBDA": 128,
+  "GE_TYPE": "SIGMA",
+  "PRG_TYPE": "AES",
+  "DEVICE": "cuda",
+  "DEBUG_LEVEL": 2,
+  "DTYPE": "float",
+  "SCALE_BIT": 8,
+  "EXP_ITER": 8,
+  "GELU_TABLE_BIT": 6,
+  "TANH_TABLE_BIT": 7,
+  "VCMP_SPLIT_LEN": 8
+}

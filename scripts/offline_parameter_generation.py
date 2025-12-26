@@ -1,41 +1,43 @@
-from NssMPC.application.neural_network.layers.activation import GeLUKey
-from NssMPC.primitives.secret_sharing.function import VSigmaKey, GrottoDICFKey, DICFKey, SigmaDICFKey
-from NssMPC.protocols.honest_majority_3pc.msb_with_os import MACKey
-from NssMPC.protocols.honest_majority_3pc.multiplication import RssMulTriples
-from NssMPC.protocols.honest_majority_3pc.oblivious_select_dpf import VOSKey
-from NssMPC.protocols.semi_honest_3pc.truncate import RssTruncAuxParams
-from NssMPC.protocols.semi_honest_2pc import Wrap, ReciprocalSqrtKey
-from NssMPC.protocols.semi_honest_2pc.b2a import B2AKey
-from NssMPC.protocols.semi_honest_2pc.comparison import BooleanTriples
-from NssMPC.protocols.semi_honest_2pc.division import DivKey
-from NssMPC.protocols.semi_honest_2pc.multiplication import AssMulTriples
-from NssMPC.protocols.semi_honest_2pc.tanh import TanhKey
+from nssmpc.application.neural_network.layers.activation import GeLUKey
+from nssmpc.primitives.secret_sharing.function import VSigmaKey, GrottoDICFKey, DICFKey, SigmaDICFKey
+from nssmpc.protocols.honest_majority_3pc.msb_with_os import MACKey
+from nssmpc.protocols.honest_majority_3pc.multiplication import RssMulTriples
+from nssmpc.protocols.honest_majority_3pc.oblivious_select_dpf import VOSKey
+from nssmpc.protocols.honest_majority_3pc.truncation import RssTruncAuxParams
+from nssmpc.protocols.semi_honest_2pc.b2a import B2AKey
+from nssmpc.protocols.semi_honest_2pc.comparison import BooleanTriples
+from nssmpc.protocols.semi_honest_2pc.division import DivKey
+from nssmpc.protocols.semi_honest_2pc.multiplication import AssMulTriples
+from nssmpc.protocols.semi_honest_2pc.reciprocal_sqrt import ReciprocalSqrtKey
+from nssmpc.protocols.semi_honest_2pc.tanh import TanhKey
+from nssmpc.protocols.semi_honest_2pc.truncation import Wrap
 
-gen_num = 100
+gen_num = 200
 
-AssMulTriples.gen_and_save(gen_num, num_of_party=2, type_of_generation='TTP')
-BooleanTriples.gen_and_save(gen_num, num_of_party=2, type_of_generation='TTP')
+AssMulTriples.gen_and_save(gen_num)
+BooleanTriples.gen_and_save(gen_num)
 Wrap.gen_and_save(gen_num)
-GrottoDICFKey.gen_and_save(gen_num)
-RssMulTriples.gen_and_save(gen_num)
 DICFKey.gen_and_save(gen_num)
+GrottoDICFKey.gen_and_save(gen_num)
 SigmaDICFKey.gen_and_save(gen_num)
 ReciprocalSqrtKey.gen_and_save(gen_num)
 DivKey.gen_and_save(gen_num)
 GeLUKey.gen_and_save(gen_num)
-RssTruncAuxParams.gen_and_save(gen_num)
 B2AKey.gen_and_save(gen_num)
 TanhKey.gen_and_save(gen_num)
+
 MACKey.gen_and_save(gen_num)
+RssMulTriples.gen_and_save(gen_num)
+RssTruncAuxParams.gen_and_save(gen_num)
 
-VOSKey.gen_and_save(gen_num, 'VOSKey_0')
-VOSKey.gen_and_save(gen_num, 'VOSKey_1')
-VOSKey.gen_and_save(gen_num, 'VOSKey_2')
+VOSKey.gen_and_save(gen_num, tag='0')
+VOSKey.gen_and_save(gen_num, tag='1')
+VOSKey.gen_and_save(gen_num, tag='2')
 
-VSigmaKey.gen_and_save(gen_num, 'VSigmaKey_0')
-VSigmaKey.gen_and_save(gen_num, 'VSigmaKey_1')
-VSigmaKey.gen_and_save(gen_num, 'VSigmaKey_2')
+VSigmaKey.gen_and_save(gen_num, tag='0')
+VSigmaKey.gen_and_save(gen_num, tag='1')
+VSigmaKey.gen_and_save(gen_num, tag='2')
 
-B2AKey.gen_and_save(gen_num, 'B2AKey_0')
-B2AKey.gen_and_save(gen_num, 'B2AKey_1')
-B2AKey.gen_and_save(gen_num, 'B2AKey_2')
+B2AKey.gen_and_save(gen_num, tag='0')
+B2AKey.gen_and_save(gen_num, tag='1')
+B2AKey.gen_and_save(gen_num, tag='2')

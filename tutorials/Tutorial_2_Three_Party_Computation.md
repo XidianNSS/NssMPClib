@@ -6,8 +6,8 @@ NssMPC supports both Honest Majority (HONEST_MAJORITY) and Semi-Honest (SEMI_HON
 ## Prerequisites
 
 ```python
-from NssMPC import Party3PC, PartyRuntime, HONEST_MAJORITY, SEMI_HONEST, SecretTensor
-from NssMPC.config.configs import DEVICE
+from nssmpc import Party3PC, PartyRuntime, HONEST_MAJORITY, SEMI_HONEST, SecretTensor
+from nssmpc.config.configs import DEVICE
 import torch
 ```
 
@@ -32,10 +32,10 @@ import torch
 ```python
 # File: party0_honest.py
 # Party 0 - Data Owner/Initiator in Honest Majority mode
-party0 = Party3PC(0, HONEST_MAJORITY)
+party = Party3PC(0, HONEST_MAJORITY)
 
 with PartyRuntime(party0):
-    party0.online()  # Establish connections with P1 and P2
+    party.online()  # Establish connections with P1 and P2
     
     # All secret sharing operations go here
     # ... rest of party0's code
@@ -45,10 +45,10 @@ with PartyRuntime(party0):
 ```python
 # File: party0_semi.py
 # Party 0 - Data Owner/Initiator in Semi-Honest mode
-party0 = Party3PC(0, SEMI_HONEST)
+party = Party3PC(0, SEMI_HONEST)
 
 with PartyRuntime(party0):
-    party0.online()  # Establish connections with P1 and P2
+    party.online()  # Establish connections with P1 and P2
     
     # All secret sharing operations go here
     # ... rest of party0's code
@@ -59,10 +59,10 @@ with PartyRuntime(party0):
 # File: party1.py  
 # Party 1 - Computation Participant
 # Must use the SAME mode as party0
-party1 = Party3PC(1, HONEST_MAJORITY)  # or SEMI_HONEST
+party = Party3PC(1, HONEST_MAJORITY)  # or SEMI_HONEST
 
 with PartyRuntime(party1):
-    party1.online()  # Establish connections with P0 and P2
+    party.online()  # Establish connections with P0 and P2
     
     # All secret sharing operations go here
     # ... rest of party1's code
@@ -73,10 +73,10 @@ with PartyRuntime(party1):
 # File: party2.py
 # Party 2 - Computation Participant
 # Must use the SAME mode as other parties
-party2 = Party3PC(2, HONEST_MAJORITY)  # or SEMI_HONEST
+party = Party3PC(2, HONEST_MAJORITY)  # or SEMI_HONEST
 
 with PartyRuntime(party2):
-    party2.online()  # Establish connections with P0 and P1
+    party.online()  # Establish connections with P0 and P1
     
     # All secret sharing operations go here
     # ... rest of party2's code
@@ -92,51 +92,54 @@ with PartyRuntime(party2):
 ### 1. Secret Sharing and Reconstruction
 
 #### Party 0: Creating and Sharing Secrets (Both Modes)
+
 ```python
 # File: party0.py (can be either honest or semi-honest mode)
-with PartyRuntime(party0):
-    party0.online()
-    
+with PartyRuntime(party):
+    party.online()
+
     # Create local tensors (only party0 has the original data)
     x = torch.tensor([1.1, 1.1, 1.3], device=DEVICE)
     y = torch.tensor([1.2, 1.1, 2.3], device=DEVICE)
-    
+
     # Convert to secret-shared tensors (automatically shares with P1 and P2)
     share_x = SecretTensor(tensor=x)
     share_y = SecretTensor(tensor=y)
-    
-    # Reconstruction (requires collaboration from at least 2 parties)
-    reconstructed_x = share_x.restore().convert_to_real_field()
+
+    # Reconstruction example
+    reconstructed_x = share_x.recon(target_id=0).convert_to_real_field()
     print("Reconstructed x:", reconstructed_x)
 ```
 
 #### Party 1: Receiving and Working with Shares
+
 ```python
 # File: party1.py (must match party0's mode)
-with PartyRuntime(party1):
-    party1.online()
-    
+with PartyRuntime(party):
+    party.online()
+
     # Receive secret shares (automatically handled by SecretTensor)
     share_x = SecretTensor(src_id=0)  # Shares from party 0
     share_y = SecretTensor(src_id=0)
-    
+
     # Participate in reconstruction
-    reconstructed_x = share_x.restore().convert_to_real_field()
+    reconstructed_x = share_x.recon(target_id=0).convert_to_real_field()
     print("Reconstructed x:", reconstructed_x)
 ```
 
 #### Party 2: Receiving and Working with Shares
+
 ```python
 # File: party2.py (must match party0's mode)
-with PartyRuntime(party2):
-    party2.online()
-    
+with PartyRuntime(party):
+    party.online()
+
     # Receive secret shares
     share_x = SecretTensor(src_id=0)  # Shares from party 0
     share_y = SecretTensor(src_id=0)
-    
+
     # Participate in reconstruction
-    reconstructed_x = share_x.restore().convert_to_real_field()
+    reconstructed_x = share_x.recon(target_id=0).convert_to_real_field()
     print("Reconstructed x:", reconstructed_x)
 ```
 
@@ -146,20 +149,20 @@ with PartyRuntime(party2):
 
 ```python
 # In each party's separate file (party0.py, party1.py, party2.py)
-with PartyRuntime(party):  # Replace 'party' with party0, party1, or party2
+with PartyRuntime(party):
     # Addition
     share_z = share_x + share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("x + y:", result)
-    
+
     # Element-wise Multiplication
     share_z = share_x * share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("x * y:", result)
-    
+
     # Matrix Multiplication (if x and y are matrices)
     share_z = share_x @ share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("x @ y:", result)
 ```
 
@@ -201,22 +204,22 @@ with PartyRuntime(party):
 with PartyRuntime(party):
     # Division
     share_z = share_x / share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("x / y:", result)
-    
+
     # Exponential function
     share_z = share_x.exp()
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("exp(x):", result)
-    
+
     # Inverse square root
     share_z = share_y.rsqrt()
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("rsqrt(y):", result)
-    
+
     # Summation along dimension
     share_z = share_x.sum(dim=-1)
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("sum(x, dim=-1):", result)
 ```
 
@@ -238,88 +241,92 @@ with PartyRuntime(party):
 
 ## Complete Example Structure
 
-### party0_honest.py (Honest Majority Mode)
+### party0_honest.py (Semi-Honest Mode)
+
 ```python
 # File: party0_honest.py - MUST be run separately
-from NssMPC import Party3PC, PartyRuntime, HONEST_MAJORITY, SecretTensor
+from nssmpc import Party3PC, PartyRuntime, HONEST_MAJORITY, SecretTensor
 import torch
 
 # Initialize ONLY party0 in Honest Majority mode
-party0 = Party3PC(0, HONEST_MAJORITY)
+party = Party3PC(0, HONEST_MAJORITY)
 
-with PartyRuntime(party0):
-    party0.online()
-    
+with PartyRuntime(party):
+    party.online()
+
     # Only party0 creates the original data
     x = torch.tensor([1.1, 1.1, 1.3])
     share_x = SecretTensor(tensor=x)
-    
+
     # Perform computations
     share_z = share_x + share_x
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("Party 0 (Honest) Result:", result)
 ```
 
 ### party0_semi.py (Semi-Honest Mode)
+
 ```python
 # File: party0_semi.py - MUST be run separately
-from NssMPC import Party3PC, PartyRuntime, SEMI_HONEST, SecretTensor
+from nssmpc import Party3PC, PartyRuntime, SEMI_HONEST, SecretTensor
 import torch
 
 # Initialize ONLY party0 in Semi-Honest mode
 party0 = Party3PC(0, SEMI_HONEST)
 
-with PartyRuntime(party0):
-    party0.online()
-    
+with PartyRuntime(party):
+    party.online()
+
     # Only party0 creates the original data
     x = torch.tensor([1.1, 1.1, 1.3])
     share_x = SecretTensor(tensor=x)
-    
+
     # Perform computations
     share_z = share_x + share_x
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("Party 0 (Semi-Honest) Result:", result)
 ```
 
 ### party1.py (Matching Mode)
+
 ```python
 # File: party1.py - MUST be run separately  
 # Must match party0's mode (either HONEST_MAJORITY or SEMI_HONEST)
-from NssMPC import Party3PC, PartyRuntime, HONEST_MAJORITY, SecretTensor
+from nssmpc import Party3PC, PartyRuntime, HONEST_MAJORITY, SecretTensor
 
 # Initialize ONLY party1 in SAME mode as party0
-party1 = Party3PC(1, HONEST_MAJORITY)  # or SEMI_HONEST
+party = Party3PC(1, HONEST_MAJORITY)  # or SEMI_HONEST
 
-with PartyRuntime(party1):
-    party1.online()
-    
+with PartyRuntime(party):
+    party.online()
+
     # Receive shares from party0
     share_x = SecretTensor(src_id=0)
-    
+
     # Perform SAME computations as party0
     share_z = share_x + share_x
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("Party 1 Result:", result)
 ```
 
 ### party2.py (Matching Mode)
+
 ```python
 # File: party2.py - MUST be run separately
-from NssMPC import Party3PC, PartyRuntime, HONEST_MAJORITY, SecretTensor
+from nssmpc import Party3PC, PartyRuntime, HONEST_MAJORITY, SecretTensor
 
 # Initialize ONLY party2 in SAME mode as other parties
-party2 = Party3PC(2, HONEST_MAJORITY)  # or SEMI_HONEST
+party = Party3PC(2, HONEST_MAJORITY)  # or SEMI_HONEST
 
-with PartyRuntime(party2):
-    party2.online()
-    
+with PartyRuntime(party):
+    party.online()
+
     # Receive shares from party0
     share_x = SecretTensor(src_id=0)
-    
+
     # Perform SAME computations as other parties
     share_z = share_x + share_x
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("Party 2 Result:", result)
 ```
 

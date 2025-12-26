@@ -33,79 +33,39 @@ Many secure computation protocols require pre-computed cryptographic materials (
 NssMPClib supports two methods for generating auxiliary parameters:
 
 #### Method 1: Trusted Third Party (TTP) - Recommended for Development
-This method simulates a trusted third party generating parameters locally:
 
-```python
-from NssMPC.application.neural_network.layers.activation import GeLUKey
-from NssMPC.primitives.secret_sharing.function import VSigmaKey, GrottoDICFKey, DICFKey, SigmaDICFKey
-from NssMPC.protocols.honest_majority_3pc.msb_with_os import MACKey
-from NssMPC.protocols.honest_majority_3pc.multiplication import RssMulTriples
-from NssMPC.protocols.honest_majority_3pc.oblivious_select_dpf import VOSKey
-from NssMPC.protocols.semi_honest_3pc.truncate import RssTruncAuxParams
-from NssMPC.protocols.semi_honest_2pc import Wrap, ReciprocalSqrtKey
-from NssMPC.protocols.semi_honest_2pc.b2a import B2AKey
-from NssMPC.protocols.semi_honest_2pc.comparison import BooleanTriples
-from NssMPC.protocols.semi_honest_2pc.division import DivKey
-from NssMPC.protocols.semi_honest_2pc.multiplication import AssMulTriples
-from NssMPC.protocols.semi_honest_2pc.tanh import TanhKey
-
-gen_num = 100
-
-AssMulTriples.gen_and_save(gen_num, num_of_party=2, type_of_generation='TTP')
-BooleanTriples.gen_and_save(gen_num, num_of_party=2, type_of_generation='TTP')
-Wrap.gen_and_save(gen_num)
-GrottoDICFKey.gen_and_save(gen_num)
-RssMulTriples.gen_and_save(gen_num)
-DICFKey.gen_and_save(gen_num)
-SigmaDICFKey.gen_and_save(gen_num)
-ReciprocalSqrtKey.gen_and_save(gen_num)
-DivKey.gen_and_save(gen_num)
-GeLUKey.gen_and_save(gen_num)
-RssTruncAuxParams.gen_and_save(gen_num)
-B2AKey.gen_and_save(gen_num)
-TanhKey.gen_and_save(gen_num)
-MACKey.gen_and_save(gen_num)
-
-VOSKey.gen_and_save(gen_num, 'VOSKey_0')
-VOSKey.gen_and_save(gen_num, 'VOSKey_1')
-VOSKey.gen_and_save(gen_num, 'VOSKey_2')
-
-VSigmaKey.gen_and_save(gen_num, 'VSigmaKey_0')
-VSigmaKey.gen_and_save(gen_num, 'VSigmaKey_1')
-VSigmaKey.gen_and_save(gen_num, 'VSigmaKey_2')
-
-B2AKey.gen_and_save(gen_num, 'B2AKey_0')
-B2AKey.gen_and_save(gen_num, 'B2AKey_1')
-B2AKey.gen_and_save(gen_num, 'B2AKey_2')
-```
-
-#### Method 2: Homomorphic Encryption (HE) - Production Use
-For real deployments, use homomorphic encryption to generate parameters without a trusted third party:
-
-```python
-from NssMPC.infra.mpc.party import SemiHonestCS
-from NssMPC.protocols.semi_honest_2pc import AssMulTriples
-
-# Initialize party
-party = SemiHonestCS(type='server')
-party.online()
-
-# Generate using homomorphic encryption
-AssMulTriples.gen_and_save(1000, num_of_party=2, type_of_generation='HE', party=party)
-```
-
-#### Method 3: Using the Provided Script (Easiest)
-The easiest way is to use the provided generation script:
+This method simulates a trusted third party generating parameters locally with provided generation script:
 
 ```bash
 # Generate all necessary parameters
 python scripts/offline_parameter_generation.py
 ```
 
+#### Method 2: Homomorphic Encryption (HE) - Production Use
+For real deployments, use homomorphic encryption to generate parameters without a trusted third party:
+
+```python
+from nssmpc import Party2PC, SEMI_HONEST
+from nssmpc.protocols.semi_honest_2pc.multiplication import AssMulTriples
+
+# Initialize party
+party = Party2PC(0, SEMI_HONEST)
+party.online()
+
+# Generate using homomorphic encryption
+AssMulTriples.gen_and_save(1000, num_of_party=2, type_of_generation='HE', party=party)
+```
+
+```bash
+
+python scripts/offline_parameter_generation.py
+```
+
 ### Parameter Storage Location
 Generated parameters are saved in:
-- **32-bit parameters**: `~/NssMPClib/data/32/`
-- **64-bit parameters**: `~/NssMPClib/data/64/`
+
+- **32-bit parameters**: `base_path/data/32/`
+- **64-bit parameters**: `base_path/data/64/`
 
 Each parameter type has its own subdirectory with separate files for each party.
 
@@ -144,7 +104,7 @@ The configuration file controls the behavior of NssMPClib. Here are the key opti
 ```json
 {
     "BIT_LEN": 32,           // Ring size: 32 or 64 bits (affects security and performance)
-    "DEBUG_LEVEL": 0,              // Debug verbosity (0-2)
+    "DEBUG_LEVEL": 0,        // Debug verbosity (0-2)
     "DTYPE": "float",        // Data type: "float" or "int"
     "SCALE_BIT": 8,          // Fixed-point scaling bits for fractional numbers
     "DEVICE": "cuda",        // Computation device: "cpu" or "cuda" (GPU)
@@ -173,14 +133,18 @@ The configuration file controls the behavior of NssMPClib. Here are the key opti
 Measure execution time of any function:
 
 ```python
-from NssMPC.infra.utils.debug_utils import get_time
+
+from nssmpc.infra.utils.profiling import RuntimeTimer
+
 
 def expensive_computation(x, y):
     # Your computation here
     return x @ y
 
+
 # Measure execution time
-result, execution_time = get_time(expensive_computation, matrix_a, matrix_b)
+with RuntimeTimer(tag="Expensive Computation"):
+    result, execution_time = expensive_computation(matrix_a, matrix_b)
 ```
 It will print average time and communication stats after execution to stdout.
 
@@ -188,115 +152,29 @@ It will print average time and communication stats after execution to stdout.
 Get both timing and communication statistics:
 
 ```python
-from NssMPC.infra.utils.debug_utils import statistic
+
+from nssmpc.infra.utils.profiling import statistic
+
 
 def benchmark_function(data):
     # Function to benchmark
     result = secure_computation(data)
     return result
 
+
 # Run statistics
 result, stats = statistic(
-    benchmark_function, 
+    benchmark_function,
     test_data,
-    times=10,     # Number of measurement runs
-    warmup=5      # Number of warm-up runs (discarded)
+    times=10,  # Number of measurement runs
+    warmup=5  # Number of warm-up runs (discarded)
 )
 
-```
-It will print average time and communication stats after execution to stdout.
+# OR you can also use the context manager RuntimeTimer to print stats infos directly
+with RuntimeTimer(enable_comm_stats=True):
+    result, execution_time = expensive_computation(matrix_a, matrix_b)
 
-## Step 4: Quick Verification
-
-### Verify Installation and Parameters
-Create a simple verification script `verify_setup.py`:
-
-```python
-import os
-import sys
-import torch
-from pathlib import Path
-
-def check_installation():
-    """Verify NssMPClib is properly installed"""
-    try:
-        import NssMPC
-        print("✅ NssMPClib imported successfully")
-        
-        # Check PyTorch version
-        print(f"✅ PyTorch version: {torch.__version__}")
-        
-        return True
-    except ImportError as e:
-        print(f"❌ Failed to import NssMPClib: {e}")
-        return False
-
-def check_parameters():
-    """Verify parameter files exist"""
-    home = str(Path.home())
-    param_dirs = [
-        f"{home}/NssMPClib/data/32/",
-        f"{home}/NssMPClib/data/64/"
-    ]
-    
-    all_exist = True
-    for param_dir in param_dirs:
-        if os.path.exists(param_dir):
-            param_count = len(list(Path(param_dir).rglob("*.pkl")))
-            print(f"✅ Found {param_count} parameter files in {param_dir}")
-        else:
-            print(f"❌ Parameter directory not found: {param_dir}")
-            all_exist = False
-    
-    return all_exist
-
-def check_config():
-    """Verify configuration file"""
-    config_path = "NssMPC/config/configs.json"
-    if os.path.exists(config_path):
-        print(f"✅ Configuration file found: {config_path}")
-        return True
-    else:
-        print(f"❌ Configuration file not found: {config_path}")
-        return False
-
-def main():
-    print("=" * 50)
-    print("NssMPClib Setup Verification")
-    print("=" * 50)
-    
-    checks = [
-        ("Installation", check_installation),
-        ("Parameters", check_parameters),
-        ("Configuration", check_config)
-    ]
-    
-    results = []
-    for name, check_func in checks:
-        print(f"\nChecking {name}...")
-        results.append(check_func())
-    
-    print("\n" + "=" * 50)
-    print("Verification Summary:")
-    print("=" * 50)
-    
-    for i, (name, _) in enumerate(checks):
-        status = "✅ PASS" if results[i] else "❌ FAIL"
-        print(f"{name}: {status}")
-    
-    if all(results):
-        print("\n🎉 All checks passed! You're ready to use NssMPClib.")
-    else:
-        print("\n⚠️ Some checks failed. Please review the setup instructions.")
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main()
-```
-
-Run the verification:
-```bash
-python verify_setup.py
+# It will print time and communication stats after execution to stdout.
 ```
 
 ### Test with Simple Computation
@@ -305,13 +183,13 @@ Test the setup with a simple 2-party computation:
 **Terminal 1 (Server)**:
 ```bash
 cd tests/primitives/secret_sharing/
-python -m unittest test_ass_server.py
+python -m unittest test_ass_p0.py
 ```
 
 **Terminal 2 (Client)**:
 ```bash
 cd tests/primitives/secret_sharing/
-python -m unittest test_ass_client.py
+python -m unittest test_ass_p1.py
 ```
 
 ## Step 5: Common Setup Issues and Solutions
@@ -351,14 +229,14 @@ After completing this setup, you're ready to:
    ```bash
    # 2-party arithmetic sharing
    cd tests/primitives/secret_sharing/
-   # Terminal 1: python -m unittest test_ass_server.py
-   # Terminal 2: python -m unittest test_ass_client.py
+   # Terminal 1: python -m unittest test_ass_p0.py
+   # Terminal 2: python -m unittest test_ass_p1.py
    ```
 3. **Explore applications**: Check out the neural network inference examples
    ```bash
    cd tests/application/neural_network/2pc/
-   # Terminal 1: python neural_network_server.py
-   # Terminal 2: python neural_network_client.py
+   # Terminal 1: python neural_network_P0.py
+   # Terminal 2: python neural_network_P1.py
    ```
 4. **Customize configurations**: Modify `configs.json` for your specific use case
 
@@ -368,7 +246,7 @@ Before starting your first MPC computation, ensure you have:
 
 - [ ] ✅ Installed NssMPClib successfully (`pip install -e .`)
 - [ ] ✅ Generated cryptographic parameters (using TTP or HE method)
-- [ ] ✅ Verified parameter files exist in `~/NssMPClib/data/`
+- [ ] ✅ Verified parameter files exist in `base_path/data/`
 - [ ] ✅ Configuration file created (`NssMPC/config/configs.json`)
 - [ ] ✅ Set appropriate configuration (BIT_LEN, DEVICE, etc.)
 - [ ] ✅ Tested basic 2-party computation

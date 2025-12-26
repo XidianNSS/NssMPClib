@@ -8,7 +8,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 
-from NssMPC.config import NN_path
+from nssmpc.config import NN_path
 from data.AlexNet.Alexnet import AlexNet
 
 transform = transforms.Compose([

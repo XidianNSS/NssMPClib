@@ -8,7 +8,7 @@ import torch.utils.data
 import torchvision
 import torchvision.transforms as transforms
 
-from NssMPC.config import NN_path
+from nssmpc.config import NN_path
 from data.ResNet.ResNet import resnet34
 
 transform = transforms.Compose([

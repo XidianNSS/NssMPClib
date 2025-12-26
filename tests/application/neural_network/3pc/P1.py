@@ -1,25 +1,24 @@
-import NssMPC.application.neural_network as nn
-from NssMPC.application.neural_network.party import PartyNeuralNetWork3PC
-from NssMPC.protocols.honest_majority_3pc.base import receive_share_from
-from NssMPC.runtime import SEMI_HONEST, PartyRuntime
+import nssmpc.application.neural_network as nn
+from nssmpc import Party3PC, SEMI_HONEST, PartyRuntime, SecretTensor, HONEST_MAJORITY
 from data.AlexNet.Alexnet import AlexNet
 
-# 测试恶意乘法
 if __name__ == '__main__':
-    P = PartyNeuralNetWork3PC(1,SEMI_HONEST)
+    # P = Party3PC(1, SEMI_HONEST)
+    P = Party3PC(1, HONEST_MAJORITY)
     P.online()
     with PartyRuntime(P):
-        net = AlexNet()
-        print("接收权重")
-        local_param = P.recv(0)
-
-        print("预处理一些东西")
-        num = P.dummy_model()
-        net = nn.utils.load_model(net, local_param)
-        print("接收输入")
-
-        share_input = receive_share_from(0, P)
-        print("share input", share_input.restore().convert_to_real_field())
-        for i in range(10):
-            output = net(share_input)
-        print("output", output.restore().convert_to_real_field())
+        # Receive weights
+        local_param = nn.utils.share_model_param(src_id=0)
+        # Convert to secure model class
+        SecAlexNet = nn.utils.convert_model(AlexNet)
+        # Instantiate secure model
+        ciphertext_model = SecAlexNet()
+        # Load weights
+        ciphertext_model = nn.utils.load_shared_param(ciphertext_model, local_param)
+        # Receive input
+        share_input = SecretTensor(src_id=0)
+        # Inference
+        output = ciphertext_model(share_input)
+        # Reconstruct output to Party 0
+        output.recon(target_id=0)
+    P.close()
