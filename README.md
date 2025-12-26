@@ -1,12 +1,18 @@
-# NssMPClib - Secure Multi-Party Computation Library
+# NssMPClib - A General-Purpose Secure Multi-Party Computation Library Based on PyTorch
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/XidianNSS/NssMPClib)
 
 ## Introduction
 
-NssMPClib is a comprehensive Secure Multi-Party Computation (MPC) library developed by Xidian University NSS Lab. It implements privacy-preserving computation protocols based on both Arithmetic Secret Sharing and Function Secret Sharing.
+NssMPClib is a secure multi-party computation (MPC) library designed specifically for machine learning, offering
+familiar PyTorch-style APIs that make privacy-preserving machine learning development as straightforward as regular
+PyTorch programming.
 
+It implements diverse privacy-preserving computation protocols based on both Arithmetic Secret Sharing and Function
+Secret Sharing.
 ## Key Features
 
+- **PyTorch Integration**: Leverages PyTorch tensor operations for ease of use
+- **Torch-like APIs**: Familiar APIs for seamless transition from standard PyTorch to secure computation
 - **Multiple Security Models**: Supports both Semi-Honest and Honest-Majority security assumptions
 - **Flexible Party Configurations**: 2-party and 3-party computation setups
 - **Multiple Secret Sharing Schemes**:

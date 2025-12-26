@@ -6,15 +6,25 @@ path = os.path.dirname(os.path.abspath(__file__))
 
 setup(
     name="NssMPClib",
-    version="1.0.0",
+    version="1.0.0b1",
     author="XDU NSS Lab",
     author_email="nss@xidian.edu.cn",
-    description="NssMPClib项目是一个通用的安全多方计算库，设计并实现了一系列基于算术秘密共享（Arithmetic Secret Sharing，ASS）和函数秘密共享（Function Secret Sharing，FSS）的隐私保护计算协议，并实现了神经网络密态推理等隐私保护机器学习应用。",
+    description="A General-Purpose Secure Multi-Party Computation Library Based on PyTorch",
     url="https://gitcode.com/openHiTLS/NssMPClib",
     license="MIT",
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        f'torchcsprng @ file://localhost/{path}/csprng'
+        f'torchcsprng @ file://localhost/{path}/csprng',
+        'torch>=2.3.0',
+    ],
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Topic :: Security :: Cryptography",
     ],
 )
