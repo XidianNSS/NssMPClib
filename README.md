@@ -35,7 +35,7 @@ Secret Sharing.
 ```bash
 git clone https://github.com/XidianNSS/NssMPClib.git
 cd NssMPClib
-pip install -e .
+pip install -e . --no-build-isolation
 ```
 
 ### Step 2: Generate Cryptographic Parameters

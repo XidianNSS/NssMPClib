@@ -541,7 +541,8 @@ class SecretSharingScheme(ProtocolMixin):
     def __mul__(self, other):
         raise NotImplementedError
 
-    __rmul__ = __mul__
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
     def __matmul__(self, other):
         raise NotImplementedError

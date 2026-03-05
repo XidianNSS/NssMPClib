@@ -6,12 +6,18 @@ from __future__ import annotations
 import math
 from functools import singledispatchmethod
 from os import PathLike
-
+import os
 import torch
 import torch.nn.functional as F
 
 from nssmpc.config import BIT_LEN, DEVICE, data_type, DTYPE_MAPPING, DTYPE_SCALE_MAPPING, HALF_RING
 from nssmpc.infra.utils.cuda import cuda_matmul, cuda_rotate
+
+try:
+    import nssmpc.infra.tensor.cutlass_kernels as nss_cuda_ext
+    CUTLASS_AVAILABLE = True
+except ImportError:
+    CUTLASS_AVAILABLE = False
 
 
 class RingTensor(object):
@@ -988,8 +994,34 @@ class RingTensor(object):
                 + f" {x.device} and {y.device}!")
         if x.device == 'cpu':
             return cls(torch.matmul(x.tensor, y.tensor), x.dtype)
+
         if 'cuda' in x.device:
-            return cls(cuda_matmul(x.tensor, y.tensor), x.dtype)
+            if CUTLASS_AVAILABLE:
+                K = x.tensor.shape[-1]
+                N = y.tensor.shape[-1]
+
+                x_flat = x.tensor.reshape(-1, K).contiguous()
+
+                y_flat = y.tensor.reshape(-1, N).contiguous()
+
+                if y_flat.shape[0] != K:
+                    #暂时不支持BMM(Batched Matrix Multiplication),后续可增加支持
+                    return cls(cuda_matmul(x.tensor, y.tensor), x.dtype, x.device)
+
+                if BIT_LEN == 64:
+                    out_flat = nss_cuda_ext.fast_matmul_int64(x_flat, y_flat)
+                elif BIT_LEN == 32:
+                    out_flat = nss_cuda_ext.fast_matmul_int32(x_flat, y_flat)
+                else:
+                    raise ValueError(f"Unsupported BIT_LEN: {BIT_LEN}")
+                
+                target_shape = x.tensor.shape[:-1] + (N,)
+
+                out = out_flat.reshape(target_shape)
+
+                return cls(out, x.dtype, x.device)
+            else:
+                return cls(cuda_matmul(x.tensor, y.tensor), x.dtype, x.device)
 
     @classmethod
     def cat(cls, tensor_list: list[RingTensor], dim: int = 0) -> RingTensor:
