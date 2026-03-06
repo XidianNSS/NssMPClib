@@ -16,6 +16,13 @@ try:
 except Exception:
     _HAS_TRITON = False
 
+CUTLASS_AVAILABLE = False
+try:
+    import nssmpc.infra.tensor.cutlass_kernels as nss_cuda_ext
+    CUTLASS_AVAILABLE = True
+except ImportError:
+    CUTLASS_AVAILABLE = False
+
 from nssmpc.config import data_type, RING_MAX
 
 
@@ -24,7 +31,8 @@ def cuda_matmul(x, y):
     Performs matrix multiplication using CUDA-optimized logic for integer types.
 
     Handles precision limitations by converting to 64-bit floats or splitting blocks
-    depending on the data type.
+    depending on the data type. Will use Cutlass fast_matmul if available, falling 
+    back to standard logic otherwise.
 
     Args:
         x (torch.Tensor): The multiplicand matrix.
@@ -36,10 +44,43 @@ def cuda_matmul(x, y):
     Examples:
         >>> result = cuda_matmul(x, y)
     """
+    if CUTLASS_AVAILABLE:
+        K = x.shape[-1]
+        N = y.shape[-1]
+
+        x_flat = x.reshape(-1, K).contiguous()
+        y_flat = y.reshape(-1, N).contiguous()
+
+        if y_flat.shape[0] != K:
+            # Currently does not support Cutlass acceleration for BMM (Batched Matrix Multiplication).
+            # Support can be added later. Pass here to hand over to the fallback branch below.
+            pass
+        else:
+            if data_type is torch.int64:
+                out_flat = nss_cuda_ext.fast_matmul_int64(x_flat, y_flat)
+            elif data_type is torch.int32:
+                out_flat = nss_cuda_ext.fast_matmul_int32(x_flat, y_flat)
+            elif data_type is torch.int16:
+                out_flat = nss_cuda_ext.fast_matmul_int16(x_flat, y_flat)
+            else:
+                raise ValueError(f"Unsupported data_type: {data_type}")
+
+            target_shape = x.shape[:-1] + (N,)
+            out = out_flat.reshape(target_shape)
+            return out
+
+    # Fallback branch: Cutlass is unavailable, or a BMM scenario is encountered.
     if data_type is torch.int32:
         return cuda_matmul_32(x, y)
-    else:  # data_type is torch.int64
+    elif data_type is torch.int64:
         return cuda_matmul_64(x, y)
+    else:
+        # Safety catch: Prevents types like int16 from erroneously entering the 64-bit logic 
+        # when Cutlass fails or encounters BMM.
+        raise NotImplementedError(
+            f"Fallback matmul logic does not support data_type: {data_type}. "
+            "For int16, ensure CUTLASS is available and inputs do not require BMM."
+        )
 
 
 def cuda_matmul_32(x, y):
@@ -206,3 +247,4 @@ else:
 
 
     cuda_rotate: Callable = rotate_by_torch
+    

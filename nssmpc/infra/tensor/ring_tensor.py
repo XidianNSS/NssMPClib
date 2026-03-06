@@ -6,17 +6,15 @@ from __future__ import annotations
 import math
 from functools import singledispatchmethod
 from os import PathLike
-
 import torch
 import torch.nn.functional as F
 
 from nssmpc.config import BIT_LEN, DEVICE, data_type, DTYPE_MAPPING, DTYPE_SCALE_MAPPING, HALF_RING
 from nssmpc.infra.utils.cuda import cuda_matmul, cuda_rotate
 
-
 class RingTensor(object):
-    # TODO 运算符重载在不支持类型时应 return NotImplemented 否则不会去检查右值是否支持了此运算
-    # TODO 支持可变bit_len?
+    # TODO: Return NotImplemented for unsupported types in operator overloading to allow fallback to the right operand's reflected methods.
+    # TODO: Add support for variable bit_len?
     """
     Define the tensor on the ring. Support for the part of operations on pytorch tensor.
 
@@ -988,6 +986,7 @@ class RingTensor(object):
                 + f" {x.device} and {y.device}!")
         if x.device == 'cpu':
             return cls(torch.matmul(x.tensor, y.tensor), x.dtype)
+
         if 'cuda' in x.device:
             return cls(cuda_matmul(x.tensor, y.tensor), x.dtype)
 

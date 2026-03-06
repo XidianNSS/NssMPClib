@@ -1,0 +1,3 @@
+recursive-include cutlass/include *
+recursive-include cutlass/tools/util/include *
+recursive-include NssMPC *.cu
