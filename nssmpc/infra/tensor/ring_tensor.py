@@ -6,19 +6,11 @@ from __future__ import annotations
 import math
 from functools import singledispatchmethod
 from os import PathLike
-import os
 import torch
 import torch.nn.functional as F
 
 from nssmpc.config import BIT_LEN, DEVICE, data_type, DTYPE_MAPPING, DTYPE_SCALE_MAPPING, HALF_RING
 from nssmpc.infra.utils.cuda import cuda_matmul, cuda_rotate
-
-try:
-    import nssmpc.infra.tensor.cutlass_kernels as nss_cuda_ext
-    CUTLASS_AVAILABLE = True
-except ImportError:
-    CUTLASS_AVAILABLE = False
-
 
 class RingTensor(object):
     # TODO: Return NotImplemented for unsupported types in operator overloading to allow fallback to the right operand's reflected methods.
