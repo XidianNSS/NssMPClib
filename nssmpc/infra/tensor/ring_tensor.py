@@ -996,32 +996,7 @@ class RingTensor(object):
             return cls(torch.matmul(x.tensor, y.tensor), x.dtype)
 
         if 'cuda' in x.device:
-            if CUTLASS_AVAILABLE:
-                K = x.tensor.shape[-1]
-                N = y.tensor.shape[-1]
-
-                x_flat = x.tensor.reshape(-1, K).contiguous()
-
-                y_flat = y.tensor.reshape(-1, N).contiguous()
-
-                if y_flat.shape[0] != K:
-                    #暂时不支持BMM(Batched Matrix Multiplication),后续可增加支持
-                    return cls(cuda_matmul(x.tensor, y.tensor), x.dtype, x.device)
-
-                if BIT_LEN == 64:
-                    out_flat = nss_cuda_ext.fast_matmul_int64(x_flat, y_flat)
-                elif BIT_LEN == 32:
-                    out_flat = nss_cuda_ext.fast_matmul_int32(x_flat, y_flat)
-                else:
-                    raise ValueError(f"Unsupported BIT_LEN: {BIT_LEN}")
-                
-                target_shape = x.tensor.shape[:-1] + (N,)
-
-                out = out_flat.reshape(target_shape)
-
-                return cls(out, x.dtype, x.device)
-            else:
-                return cls(cuda_matmul(x.tensor, y.tensor), x.dtype, x.device)
+            return cls(cuda_matmul(x.tensor, y.tensor), x.dtype)
 
     @classmethod
     def cat(cls, tensor_list: list[RingTensor], dim: int = 0) -> RingTensor:

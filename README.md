@@ -33,7 +33,7 @@ Secret Sharing.
 
 ### Step 1: Clone and Install
 ```bash
-git clone https://github.com/XidianNSS/NssMPClib.git
+git clone --recursive https://github.com/XidianNSS/NssMPClib.git
 cd NssMPClib
 pip install -e . --no-build-isolation
 ```

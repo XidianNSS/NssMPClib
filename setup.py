@@ -52,7 +52,7 @@ cutlass_util_include_dir = os.path.join(
     base_path, 'cutlass', 'tools', 'util', 'include')
 
 kernel_source_file = os.path.join(
-    'nssmpc', 'infra', 'tensor', 'nss_cutlass_kernels.cu')
+    'nssmpc', 'infra', 'utils', 'nss_cutlass_kernels.cu')
 
 if not os.path.exists(kernel_source_file):
     print(f"Error: Source file not found at {kernel_source_file}")
@@ -70,7 +70,7 @@ cxx_flags = ['-O3', '-std=c++17']
 
 ext_modules = [
     CUDAExtension(
-        name='nssmpc.infra.tensor.cutlass_kernels',
+        name='nssmpc.infra.utils.cutlass_kernels',
         sources=[kernel_source_file],
         include_dirs=[
             cutlass_include_dir,
