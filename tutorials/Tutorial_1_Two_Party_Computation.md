@@ -58,8 +58,8 @@ with PartyRuntime(party):
 
     # Both parties reconstruct (results match on both sides)
     reconstructed_x = share_x.recon().convert_to_real_field()
-    # Or specifically restore on party 0:
-    reconstructed_x = share_x.restore(target_id=0).convert_to_real_field()
+    # Or specifically recon on party 0:
+    reconstructed_x = share_x.recon(target_id=0).convert_to_real_field()
 ```
 
 #### Party 1
@@ -71,8 +71,8 @@ with PartyRuntime(party):
     
     # Both parties reconstruct (results match on both sides)
     reconstructed_x = share_x.recon().convert_to_real_field()
-    # Or specifically restore on party 0:
-    reconstructed_x = share_x.restore(target_id=0).convert_to_real_field()
+    # Or specifically recon on party 0:
+    reconstructed_x = share_x.recon(target_id=0).convert_to_real_field()
 ```
 
 ### 2. Arithmetic Operations
@@ -112,19 +112,19 @@ with PartyRuntime(party):
 with PartyRuntime(party):
     # Equality check
     share_z = share_x == share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     # Greater than or equal
     share_z = share_x >= share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     # Less than or equal
     share_z = share_x <= share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     # Strictly greater than
     share_z = share_x > share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     # Strictly less than
     share_z = share_x < share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
 ```
 
 ### 4. Advanced Mathematical Functions (Each Party executes symmetrically)
@@ -158,7 +158,7 @@ with PartyRuntime(party):
 
 4. **Beaver Triples**: Matrix multiplication requires pre-generated Beaver triples shared between parties.
 
-5. **Field Conversion**: Use `.convert_to_real_field()` after `.restore()` to get plaintext results.
+5. **Field Conversion**: Use `.convert_to_real_field()` after `.recon()` to get plaintext results.
 
 6. **Tolerance**: Due to fixed-point arithmetic, use appropriate tolerances when comparing results:
    ```python

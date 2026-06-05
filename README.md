@@ -24,24 +24,77 @@ Secret Sharing.
 
 ## System Requirements
 
-- **OS**: Linux (required for proper compilation)
+- **OS**: Linux is the primary supported platform; Windows works for CPU-only
+  installs (and CUDA installs with matching toolchain) but is less tested.
 - **Python**: 3.10 or higher (recommended: 3.12)
-- **PyTorch**: >=2.3.0 (recommended: 2.7.1)
-- **Additional**: C++ compiler (gcc/g++), CUDA toolkit (for GPU support)
+- **PyTorch**: >=2.5.0 (recommended: 2.7.1 or newer compatible release)
+- **C/C++ compiler**: required because `torchcsprng` always builds a native
+  extension. On Linux: `gcc`/`g++` (e.g. `sudo apt-get install build-essential`).
+  On Windows: install
+  [Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+  with the "Desktop development with C++" workload.
+- **CUDA toolkit**: optional, only for GPU acceleration. Match the toolkit version
+  to `torch.version.cuda`.
 
 ## Installation
 
-### Step 1: Clone and Install
+NssMPClib bundles CUDA extensions and CUTLASS submodules. The included advice
+script inspects your environment (Python, PyTorch, CUDA, nvcc, GPU, submodules)
+and reports whether the machine is ready to install. It is read-only and never
+installs anything itself; when something is missing, it names the required
+package or version instead of trying to generate platform-specific commands.
+
+### Step 1: Clone with submodules
+
 ```bash
 git clone --recursive https://github.com/XidianNSS/NssMPClib.git
 cd NssMPClib
+```
+
+If you cloned without `--recursive`, run `git submodule update --init --recursive`.
+
+### Step 2: Check your environment
+
+```bash
+python3 scripts/installation_advice.py
+```
+
+If prerequisites (PyTorch, matching CUDA Toolkit / nvcc, submodules) are
+missing, the script prints a `FAIL` item with the required version or condition.
+Apply the fix that matches your OS/package manager and rerun the script until
+the diagnosis passes or only reports intentional warnings.
+
+### Step 3: Install NssMPClib
+
+Once the check passes, the standard editable install is:
+
+```bash
 pip install -e . --no-build-isolation
 ```
 
-### Step 2: Generate Cryptographic Parameters
-Generate essential precomputed parameters for MPC operations:
+Because `--no-build-isolation` reuses your environment instead of bootstrapping
+a clean one, `setuptools` and `wheel` must already be installed there. The
+advice script flags it explicitly if either is missing; install them with
+`pip install --upgrade setuptools wheel` and rerun.
+
+- **CUDA torch + matching nvcc + GPU visible**: `setup.py` auto-detects
+  `CUDA_HOME` (by scanning `/usr/local/cuda-*` for the nvcc release matching
+  `torch.version.cuda`) and `TORCH_CUDA_ARCH_LIST` (from visible GPUs), then
+  builds the CUTLASS and CUDA `torchcsprng` extensions.
+- **CPU-only torch**: `setup.py` skips the CUTLASS extension (since
+  `torch.version.cuda` is unset) and `csprng/setup.py` skips its CUDA build
+  (since `torch.cuda.is_available()` is False), so the same command above works
+  as-is — no env vars needed.
+
+The `NSSMPC_SKIP_CUTLASS=1 NSSMPC_SKIP_CSPRNG_CUDA=1` variant is only needed in
+edge cases (CUDA torch installed but nvcc missing / no GPU / broken toolchain);
+the advice script reports when those skip flags are already part of the selected
+installation path.
+
+### Step 4: Generate cryptographic parameters
+
 ```bash
-python scripts/offline_parameter_generation.py
+python3 scripts/offline_parameter_generation.py
 ```
 
 **Note**: Parameters are saved to `~/NssMPClib/data/` (32-bit in `data/32/`, 64-bit in `data/64/`).
@@ -192,7 +245,7 @@ Detailed tutorials are available in the `tutorials/` directory:
 
 1. **"Parameters not found" Error**:
    ```bash
-   python scripts/offline_parameter_generation.py
+   python3 scripts/offline_parameter_generation.py
    ```
 
 2. **Port Already in Use**:
@@ -200,6 +253,16 @@ Detailed tutorials are available in the `tutorials/` directory:
 
 3. **CUDA Errors**:
    Set `DEVICE: "cpu"` in config or check CUDA installation.
+
+4. **Install-time CUDA / submodule errors** (e.g. `RuntimeError: The detected
+   CUDA version (X.Y) mismatches ...`, or `fatal error: cutlass/...: No such
+   file or directory`):
+   Rerun the advice script. It will tell you whether the missing requirement is
+   a matching CUDA Toolkit / nvcc version, a compatible PyTorch build, missing
+   submodules, or an intentional CPU/skip-CUDA path:
+   ```bash
+   python3 scripts/installation_advice.py
+   ```
 
 ## Contributing
 

@@ -173,27 +173,27 @@ with PartyRuntime(party):
 with PartyRuntime(party):
     # Equality check
     share_z = share_x == share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("x == y:", result)
     
     # Greater than or equal
     share_z = share_x >= share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("x >= y:", result)
     
     # Less than or equal
     share_z = share_x <= share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("x <= y:", result)
     
     # Strictly greater than
     share_z = share_x > share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("x > y:", result)
     
     # Strictly less than
     share_z = share_x < share_y
-    result = share_z.restore().convert_to_real_field()
+    result = share_z.recon().convert_to_real_field()
     print("x < y:", result)
 ```
 
@@ -233,7 +233,7 @@ with PartyRuntime(party):
 
 4. **Synchronization**: All three parties must execute corresponding operations in the same order and within their respective runtime contexts.
 
-5. **Field Conversion**: Use `.convert_to_real_field()` after `.restore()` to get plaintext results.
+5. **Field Conversion**: Use `.convert_to_real_field()` after `.recon()` to get plaintext results.
 
 6. **Security Mode Differences**:
    - `HONEST_MAJORITY`: Can tolerate one malicious party, slightly more overhead
