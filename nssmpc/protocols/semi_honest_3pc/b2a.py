@@ -27,6 +27,7 @@ def sh3pc_bit_injection(x: ReplicatedSecretSharing, party: Party = None) -> Opti
     """
     if party is None:
         party = PartyCtx.get()
+    x.dtype = 'int'
     if party.party_id == 0:
         c0 = RingTensor.random(x.shape, dtype=x.dtype, device=x.device)
         party.send(2, c0)

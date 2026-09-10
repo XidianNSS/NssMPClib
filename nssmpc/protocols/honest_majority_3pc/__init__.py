@@ -3,6 +3,7 @@ from .comparison import hm3pc_ge
 from .mac_check import hm3pc_mac_check, hm3pc_check_zero
 from .msb_with_os import hm3pc_msb_with_os_without_mac_check
 from .multiplication import hm3pc_mul, hm3pc_matmul, sh3pc_mul_with_out_trunc, sh3pc_matmul_with_out_trunc
+from .division import hm3pc_div
 
 __all__ = [
     "hm3pc_check_zero",
@@ -15,6 +16,7 @@ __all__ = [
     "hm3pc_mac_check",
     "hm3pc_msb_with_os_without_mac_check",
     "hm3pc_mul",
+    "hm3pc_div",
     "hm3pc_matmul",
     "sh3pc_mul_with_out_trunc",
     "sh3pc_matmul_with_out_trunc",

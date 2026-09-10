@@ -4,7 +4,6 @@
 from nssmpc.config import DEBUG_LEVEL
 from nssmpc.infra.mpc.party import Party, PartyCtx
 from nssmpc.infra.tensor.ring_tensor import RingTensor
-from nssmpc.infra.utils.common import list_rotate
 from nssmpc.primitives.secret_sharing import ReplicatedSecretSharing
 from nssmpc.primitives.secret_sharing.function import SigmaDICF, SigmaDICFKey
 from nssmpc.protocols.semi_honest_3pc.b2a import sh3pc_bit_injection
@@ -33,20 +32,16 @@ def sh3pc_ge(x: ReplicatedSecretSharing, y: ReplicatedSecretSharing, party: Part
 
     if party.party_id == 2:
         out = RingTensor.zeros(z.shape, z.dtype, z.device)
-        pass
     else:
         k = party.get_param(SigmaDICFKey, z.numel())
-        if DEBUG_LEVEL:
-            r_in = [k.r_in, RingTensor.convert_to_ring(0)]
+        r_in = k.r_in if DEBUG_LEVEL else k.r_in.reshape(z.shape)
+        if party.party_id == 0:
+            local_share = z.item[0] + r_in
         else:
-            r_in = [k.r_in.reshape(z.shape), RingTensor.convert_to_ring(0)]
-
-        r_in = list_rotate(r_in, party.party_id - 1)
-        r = z + x.__class__(r_in)
-
-        party.send((party.party_id + 1) % 2, r.item[party.party_id])
-        r_other = party.recv((party.party_id + 1) % 2)
-        z_shift = r.item[0] + r.item[1] + r_other
+            local_share = z.item[0] + z.item[1] + r_in
+        party.send((party.party_id + 1) % 2, local_share)
+        other_share = party.recv((party.party_id + 1) % 2)
+        z_shift = local_share + other_share
 
         z_shift.dtype = 'int'
         out = SigmaDICF.eval(z_shift, k, party.party_id)

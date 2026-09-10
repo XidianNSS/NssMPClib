@@ -4,7 +4,7 @@
 
 from typing import Tuple
 
-from nssmpc.config import DEBUG_LEVEL, data_type
+from nssmpc.config import data_type
 from nssmpc.infra.mpc.aux_parameter.parameter import Parameter, ParameterRegistry
 from nssmpc.infra.tensor import RingTensor
 
@@ -97,15 +97,15 @@ class LookUp(object):
         shape = x.shape
         x = x.flatten()
 
-        key.phi *= x.scale  # TODO: 临时修正
+        key.phi *= x.scale  # TODO: Normalize the key scale during parameter generation.
         key.phi.dtype = x.dtype
         x_shift_shared = key.phi - x
         x_shift = x_shift_shared.recon().convert_to_real_field().to(data_type)
-        y = key.onehot_value
-        if DEBUG_LEVEL == 2:
-            y = y.reshape(1, -1)
+        # A single parameter loses its batch axis when indexed by the provider,
+        # including in non-debug mode. Rotation always expects a matrix.
+        y = key.onehot_value.reshape(-1, table.numel())
 
-        u = x.__class__.rotate(y, shifts=-x_shift)  # TODO: GPU环境下，先转cpu，算完乘法后再转gpu或许更快
+        u = x.__class__.rotate(y, shifts=-x_shift)  # TODO: Compare CPU and GPU performance for lookup rotation.
         res = (u * table).sum(-1)
         res.dtype = x.dtype
 

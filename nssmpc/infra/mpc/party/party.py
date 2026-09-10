@@ -258,7 +258,7 @@ class Party3PC(Party):
         self.virtual_party_with_previous = VirtualParty2PC(0, self)
         self.prg_0 = None
         self.prg_1 = None
-        # 在Party这个抽象类里储存连接映射，Communicator只负责接收地址进行收发
+        # Party stores peer mappings; Communicator handles sending and receiving.
         self.master_ip = master_ip
         self.master_port = master_port
 
@@ -335,9 +335,12 @@ class Party3PC(Party):
         Examples:
             party.close()
         """
-        self.communicator.shutdown()
-        # for provider_thread in self.provider_threads.values():
-        #     provider_thread.join()
+        try:
+            self.communicator.shutdown()
+        finally:
+            for owner in (self, self.virtual_party_with_previous, self.virtual_party_with_next):
+                for provider_thread in owner.provider_threads.values():
+                    provider_thread.join()
 
 
 class VirtualParty2PC(Party):

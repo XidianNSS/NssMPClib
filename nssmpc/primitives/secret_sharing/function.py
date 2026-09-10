@@ -874,7 +874,7 @@ class DICFKey(Parameter):
         gamma = r_in - 1
 
         r_tensor = r_in.tensor
-        # 修正参数
+        # Adjust the parameters.
         q1 = (upper_bound + 1)
         ap = (down_bound + r_tensor)
         aq = (upper_bound + r_tensor)
@@ -1208,7 +1208,7 @@ class SigmaDICF:
         y = y + 1
         out = prefix_parity_query(y, key.dpf_key, party_id)
         out = x_shift.signbit() * party_id ^ key.c.view(-1, 1) ^ out
-        return out.view(shape)
+        return out.get_bit(0).view(shape)
 
     @staticmethod
     def one_key_eval(input_list, key, party_id):
@@ -1451,7 +1451,7 @@ class VDPF(object):
         Examples:
             >>> res, pi = VDPF.ppq(x, key, 0)
         """
-        # 将输入展平
+        # Flatten the input.
         shape = x.tensor.shape
         x = x.clone()
         x.tensor = x.tensor.view(-1, 1)
@@ -1728,7 +1728,7 @@ def vdpf_gen(num_of_keys, alpha, beta):
     """
     seed_0 = torch.randint(-HALF_RING, HALF_RING - 1, [num_of_keys, LAMBDA // BIT_LEN], dtype=data_type, device=DEVICE)
     seed_1 = torch.randint(-HALF_RING, HALF_RING - 1, [num_of_keys, LAMBDA // BIT_LEN], dtype=data_type, device=DEVICE)
-    # 产生伪随机数产生器的种子
+    # Generate seeds for the pseudorandom generator.
 
     prg = PRG(PRG_TYPE, device=DEVICE)
     prg.set_seeds(seed_0)
