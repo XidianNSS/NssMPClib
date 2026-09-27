@@ -54,7 +54,9 @@ def align_shape(x_shape, y_shape):
         x_shape = [1] * (len(y_shape) - len(x_shape)) + x_shape
 
     i = 0
-    while x_shape[i] == 1 and y_shape[i] == 1 and i < len(x_shape):
+    # Remove only redundant batch dimensions. The final two dimensions carry
+    # matrix semantics, so shapes such as [1, 1] @ [1, 32] must remain 2-D.
+    while len(x_shape) - i > 2 and x_shape[i] == 1 and y_shape[i] == 1:
         i += 1
 
     return x_shape[i:], y_shape[i:]

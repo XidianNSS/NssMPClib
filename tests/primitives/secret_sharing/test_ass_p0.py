@@ -2,15 +2,17 @@
 computation based on arithmetic secret sharing
 party 0
 """
+import os
 import unittest
 
 import nssmpc
 from nssmpc import Party2PC, PartyRuntime, SEMI_HONEST
 from nssmpc.config.configs import *
-from nssmpc.protocols.semi_honest_2pc.multiplication import MatmulTriples
+from tests.parameter_setup import prepare_matrix_triples
 
-party = Party2PC(0, SEMI_HONEST)
+party = Party2PC(0, SEMI_HONEST, master_port=os.environ.get("MASTER_PORT", "29500"))
 party.online()
+prepare_matrix_triples(party, [10, 10], [10, 10])
 
 with PartyRuntime(party):
     x = torch.rand([10, 10]).to(DEVICE)

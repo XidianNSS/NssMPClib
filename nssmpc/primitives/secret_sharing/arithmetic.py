@@ -1264,6 +1264,42 @@ class ReplicatedSecretSharing(SecretSharingScheme):
         else:
             raise TypeError("unsupported operand type(s) for * 'ReplicatedSecretSharing' and ", type(other))
 
+    def __truediv__(self, other):
+        """Fixed-point division by a public value or a replicated secret.
+
+        Public reciprocals are encoded at the configured fixed-point precision.
+        Secret divisors use the protocol selected by PartyRuntime.
+
+        Args:
+            other (int, float, RingTensor, or ReplicatedSecretSharing):
+                A public or secret divisor broadcastable with this sharing.
+
+        Returns:
+            ReplicatedSecretSharing: The approximate fixed-point quotient.
+
+        Raises:
+            TypeError: If the input type is unsupported or is not fixed point.
+            ZeroDivisionError: If a public divisor contains zero.
+            ValueError: If a public divisor contains nonfinite values.
+
+        Examples:
+            >>> quotient = rss / 2
+        """
+        if isinstance(other, ReplicatedSecretSharing):
+            return self._div(other)
+        if not isinstance(other, (int, float, RingTensor)):
+            return NotImplemented
+        if self.dtype != 'float':
+            raise TypeError("RSS division requires fixed-point ('float') inputs")
+        value = (other.convert_to_real_field() if isinstance(other, RingTensor)
+                 else torch.as_tensor(other, dtype=torch.float64, device=self.device))
+        if torch.any(value == 0):
+            raise ZeroDivisionError("division by a public zero")
+        if not torch.all(torch.isfinite(value)):
+            raise ValueError("public divisor must be finite")
+        reciprocal = RingTensor.convert_to_ring(1.0 / value)
+        return self * reciprocal
+
     def __matmul__(self, other):
         """Performs matrix multiplication between an RSS object with a corresponding type.
 
@@ -1299,7 +1335,7 @@ class ReplicatedSecretSharing(SecretSharingScheme):
         if isinstance(other, ReplicatedSecretSharing):
             return other.__matmul__(self)
         elif isinstance(other, RingTensor):
-            # 手动处理 RingTensor @ RSS 的情况
+            # Apply the public left operand to both replicated shares.
             result0 = RingTensor.matmul(other, self.item[0])
             result1 = RingTensor.matmul(other, self.item[1])
             result = ReplicatedSecretSharing(RingPair(result0, result1))

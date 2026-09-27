@@ -16,13 +16,13 @@ from nssmpc.protocols.semi_honest_2pc.look_up_table import LookUpKey
 
 def sh2pc_div(x: AdditiveSecretSharing, y: AdditiveSecretSharing,
               party: Party = None) -> AdditiveSecretSharing:
-    """Securely computes the division of two Additive Secret Sharings using Goldschmidt's iterative method.
+    r"""Securely computes the division of two Additive Secret Sharings using Goldschmidt's iterative method.
 
     This function implements a secure division protocol based on the **Goldschmidt approximation algorithm**.
     It iteratively converges to the quotient :math:`x / y` while maintaining data privacy.
 
     Note:
-        **Constraint:** The divisor ``y`` must strictly satisfy the range :math:`0 < y < 2^{2f}`
+        **Constraint:** The fixed-point divisor must satisfy :math:`2^{-f} \le |y| < 2^f`
         (where :math:`f` denotes the fixed-point scale bits).
         Support for a wider range of ``y`` is planned for future versions.
 
@@ -37,19 +37,25 @@ def sh2pc_div(x: AdditiveSecretSharing, y: AdditiveSecretSharing,
     Examples:
         >>> res = sh2pc_div(x, y)
     """
-    if x.numel() > y.numel():
-        return x * sh2pc_inv(y)
+    if party is None:
+        party = PartyCtx.get()
+
+    is_negative = y < 0
+    sign = 1 - is_negative * 2
+    positive_y = y * sign
+
+    if x.numel() > positive_y.numel():
+        quotient = x * sh2pc_inv(positive_y)
     else:
-        if party is None:
-            party = PartyCtx.get()
-        neg_exp2_k = get_neg_exp2_k(y, party)
+        neg_exp2_k = get_neg_exp2_k(positive_y, party)
         a = x * neg_exp2_k
-        b = y * neg_exp2_k
+        b = positive_y * neg_exp2_k
         w = b * (-2) + 2.9142
         e0 = -(b * w) + 1
         e1 = e0 * e0
+        quotient = a * w * (e0 + 1) * (e1 + 1)
 
-        return a * w * (e0 + 1) * (e1 + 1)
+    return quotient * sign
 
 
 def sh2pc_inv(x: AdditiveSecretSharing) -> AdditiveSecretSharing:

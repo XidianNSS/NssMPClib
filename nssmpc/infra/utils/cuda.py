@@ -44,7 +44,10 @@ def cuda_matmul(x, y):
     Examples:
         >>> result = cuda_matmul(x, y)
     """
-    if CUTLASS_AVAILABLE:
+    # Flattening the left operand is valid only when the right operand is
+    # exactly a matrix. Batched right operands and vectors need torch.matmul's
+    # broadcast/promotion rules, supplied by the fallback below.
+    if CUTLASS_AVAILABLE and x.ndim >= 2 and y.ndim == 2:
         K = x.shape[-1]
         N = y.shape[-1]
 
@@ -135,7 +138,7 @@ def cuda_matmul_64(x, y):
         >>> result = cuda_matmul_64(x, y)
     """
     block_num = 4
-    # 拆分成4份
+    # Split each value into four blocks.
     x_block = split_matrix(x, block_num)
     y_block = split_matrix(y, block_num)
 
@@ -195,9 +198,11 @@ if _HAS_TRITON:
             >>> out = rotate_by_triton(inputs, shifts)
         """
         n = inputs.shape[1]
-        b = shifts.numel()
-
-        s = shifts.to(torch.int32)
+        b, = torch.broadcast_shapes((inputs.shape[0],), (shifts.numel(),))
+        # LUT debug keys may have one row for many queries. Materialize the
+        # broadcast and strided views because the kernel uses flat offsets.
+        inputs = inputs.expand(b, n).contiguous()
+        s = shifts.reshape(-1).expand(b).to(torch.int32).contiguous()
         s = ((s % n) + n) % n
 
         out = torch.empty((b, n), dtype=inputs.dtype, device=inputs.device)
@@ -219,7 +224,7 @@ if _HAS_TRITON:
         src = cols + (n - s)
         src = tl.where(src >= n, src - n, src)
 
-        vals = tl.load(x_ptr + src, mask=mask, other=0)
+        vals = tl.load(x_ptr + row_id * n + src, mask=mask, other=0)
         tl.store(out_ptr + row_id * n + cols, vals, mask=mask)
 
 
@@ -247,4 +252,3 @@ else:
 
 
     cuda_rotate: Callable = rotate_by_torch
-    
