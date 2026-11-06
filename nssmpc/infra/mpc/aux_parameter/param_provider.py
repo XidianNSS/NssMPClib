@@ -350,6 +350,20 @@ class ParamProvider(BaseParamProvider):
         if self.param is None:
             raise Exception(f"{self.__class__.__name__}:Please load parameters first!")
         if DEBUG_LEVEL == 2:
+            vector_debug_params = {
+                "VSigmaKey", "MACKey", "RssMulTriples", "VOSKey",
+            }
+            tagged_virtual_key = self.saved_name.startswith("B2AKey_")
+            if self.param_type.__name__ in vector_debug_params or tagged_virtual_key:
+                if number_of_params > len(self.param):
+                    raise Exception(
+                        f"{self.__class__.__name__}:The number of parameters is larger than the size of the buffer! "
+                        f"need {number_of_params}, but only {len(self.param)} available!"
+                    )
+                param = self.param[:number_of_params]
+                if number_of_params == 1:
+                    param = param[0]
+                return param.to(DEVICE)
             return self.param[0].to(DEVICE)
         if number_of_params > len(self.param):
             raise Exception(

@@ -51,9 +51,9 @@ class MacBuffer:
         Examples:
             >>> buffer.check()
         """
-        x = ReplicatedSecretSharing.cat(self.x)
-        mac = ReplicatedSecretSharing.cat(self.mac)
-        key = ReplicatedSecretSharing.cat(self.key)
+        x = ReplicatedSecretSharing.cat([value.flatten() for value in self.x])
+        mac = ReplicatedSecretSharing.cat([value.flatten() for value in self.mac])
+        key = ReplicatedSecretSharing.cat([value.flatten() for value in self.key])
         hm3pc_mac_check(x, mac, key)
         self.__init__()
 

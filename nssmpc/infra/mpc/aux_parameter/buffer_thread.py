@@ -66,9 +66,16 @@ class BufferThread(object):
         Examples:
             >>> buffer_thread.join()
         """
+        # Closing an fd in another thread does not reliably wake recv(). Send
+        # an explicit sentinel before waiting, then release both pipe ends.
+        if self.sub_p.is_alive():
+            try:
+                self.in_pipe.send('stop')
+            except (BrokenPipeError, EOFError, OSError):
+                pass
+            self.sub_p.join()
         self.in_pipe.close()
         self.out_pipe.close()
-        self.sub_p.join()
 
     def set_buffer_file_name(self, file_name):
         """
@@ -107,7 +114,9 @@ def provider_thread(params_buffer, pipe, party_id, buffer_file_name):
     while True:
         try:
             msg = _out_pipe.recv()
-            if msg == 'need params':
+            if msg == 'stop':
+                break
+            elif msg == 'need params':
                 if params_buffer.have_params:
                     params_buffer.load_buffers(party_id, buffer_file_name)
                     _out_pipe.send(1)

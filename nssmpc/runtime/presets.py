@@ -24,6 +24,7 @@ SEMI_HONEST = {
         '_mul': sh3pc_mul,
         '_matmul': sh3pc_matmul,
         '_ge': sh3pc_ge,
+        '_div': sh3pc_div,
         '_trunc': hm3pc_truncate_aby3,
         'recon': sh3pc_recon
     }
@@ -51,6 +52,7 @@ HONEST_MAJORITY = {
         '_mul': hm3pc_mul,
         '_matmul': hm3pc_matmul,
         '_ge': hm3pc_ge,
+        '_div': hm3pc_div,
         '_trunc': hm3pc_truncate_aby3,
         'recon': hm3pc_recon
     }

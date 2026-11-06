@@ -2,6 +2,7 @@
 #  Copyright (c) 2024 XDU NSS lab,
 #  Licensed under the MIT license. See LICENSE in the project root for license information.
 import os
+import torch
 from nssmpc.config import param_path, DEBUG_LEVEL, data_type, DEVICE, DTYPE
 from nssmpc.infra.mpc.aux_parameter.param_provider import BaseParamProvider
 from nssmpc.infra.mpc.aux_parameter.parameter import Parameter
@@ -32,10 +33,18 @@ def hm3pc_mul(x: ReplicatedSecretSharing, y: ReplicatedSecretSharing, party: Par
     """
     if party is None:
         party = PartyCtx.get()
+    shape = torch.broadcast_shapes(x.shape, y.shape)
+    if x.shape != shape:
+        x = x.expand(*shape)
+    if y.shape != shape:
+        y = y.expand(*shape)
     ori_type = x.dtype
     res = sh3pc_mul_with_out_trunc(x, y)
 
-    a, b, c = party.get_param(RssMulTriples, res.numel())  # TODO: need fix, get triples based on x.shape and y.shape
+    a, b, c = party.get_param(RssMulTriples, res.numel())
+    a = a.reshape(res.shape)
+    b = b.reshape(res.shape)
+    c = c.reshape(res.shape)
     x_hat = x.clone()
     y_hat = y.clone()
 

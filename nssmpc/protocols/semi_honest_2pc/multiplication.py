@@ -4,6 +4,8 @@
 import random
 from typing import Iterator, List, Tuple, Union
 
+import torch
+
 from nssmpc.config import param_path
 from nssmpc.infra.mpc.aux_parameter.parameter import Parameter
 from nssmpc.infra.mpc.party import Party, PartyCtx
@@ -98,7 +100,7 @@ class AssMulTriples(Parameter):
     #             file_name = f"{saved_name}_{i}.pth"
     #             triples[i].save(file_path=file_path, name=file_name)
     #
-    #     # todo HE部分没有做适配
+    #     # TODO: Adapt the homomorphic-encryption generation path.
     #     elif type_of_generation == 'HE':
     #         file_names = os.listdir(file_path)
     #         max_ptr = 0
@@ -329,10 +331,20 @@ def sh2pc_mul_beaver(x: AdditiveSecretSharing, y: AdditiveSecretSharing, party: 
     Examples:
         >>> res = sh2pc_mul_beaver(x, y)
     """
-    assert x.shape == y.shape, "Shapes of x and y must be equal"  # TODO: broadcasting
+    try:
+        shape = tuple(torch.broadcast_shapes(tuple(x.shape), tuple(y.shape)))
+    except RuntimeError as error:
+        raise ValueError(
+            f"operands could not be broadcast together with shapes {tuple(x.shape)} and {tuple(y.shape)}"
+        ) from error
+
+    if tuple(x.shape) != shape:
+        x = x.expand(*shape)
+    if tuple(y.shape) != shape:
+        y = y.expand(*shape)
+
     if party is None:
         party = PartyCtx.get()
-    shape = x.shape
     x = x.flatten()
     y = y.flatten()
     a, b, c = party.get_param(AssMulTriples, x.numel())

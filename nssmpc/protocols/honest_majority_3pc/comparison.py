@@ -25,7 +25,7 @@ def hm3pc_ge(x: ReplicatedSecretSharing, y: ReplicatedSecretSharing) -> Replicat
     """
     z = x - y
     dtype = x.dtype
-    x.dtype = y.dtype = 'int'
+    z.dtype = 'int'
 
     shape = z.shape
     from nssmpc.protocols.honest_majority_3pc.msb_with_os import \
@@ -33,7 +33,6 @@ def hm3pc_ge(x: ReplicatedSecretSharing, y: ReplicatedSecretSharing) -> Replicat
     res, mac_v, mac_key = hm3pc_msb_with_os_without_mac_check(z)
 
     MAC_BUFFER.add(res, mac_v, mac_key)
-    # mac_check(res, mac_v, mac_key)
 
     res.dtype = dtype
     return (res.view(shape) * res.scale - 1) * -1

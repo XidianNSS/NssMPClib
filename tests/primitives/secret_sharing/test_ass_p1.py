@@ -2,15 +2,17 @@
 computation based on arithmetic secret sharing
 party 1
 """
+import os
 import unittest
 
 import nssmpc
 from nssmpc import Party2PC, PartyRuntime, SEMI_HONEST
 from nssmpc.config.configs import DEBUG_LEVEL
-from nssmpc.protocols.semi_honest_2pc.multiplication import MatmulTriples
+from tests.parameter_setup import prepare_matrix_triples
 
-party = Party2PC(1, SEMI_HONEST)
+party = Party2PC(1, SEMI_HONEST, master_port=os.environ.get("MASTER_PORT", "29500"))
 party.online()
+prepare_matrix_triples(party, [10, 10], [10, 10])
 with PartyRuntime(party):
     share_x = nssmpc.SecretTensor(src_id=0)
     share_y = nssmpc.SecretTensor(src_id=0)

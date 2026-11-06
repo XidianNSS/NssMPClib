@@ -11,11 +11,10 @@ from nssmpc.infra.mpc.aux_parameter.parameter import Parameter
 from nssmpc.infra.mpc.party import PartyCtx
 from nssmpc.infra.mpc.party.party import Party3PC
 from nssmpc.infra.tensor import RingTensor
-from nssmpc.infra.utils.common import list_rotate
-from nssmpc.primitives.secret_sharing import ReplicatedSecretSharing
+from nssmpc.primitives.secret_sharing import AdditiveSecretSharing, ReplicatedSecretSharing
 from nssmpc.primitives.secret_sharing.function import VSigma, VSigmaKey
-from nssmpc.protocols.honest_majority_3pc.base import hm3pc_recon
 from nssmpc.protocols.semi_honest_2pc.b2a import sh2pc_b2a
+from nssmpc.protocols.semi_honest_2pc.base import sh2pc_recon
 
 
 def hm3pc_msb_with_os_without_mac_check(x: ReplicatedSecretSharing, share_table=None, party: Party3PC = None):
@@ -49,57 +48,52 @@ def hm3pc_msb_with_os_without_mac_check(x: ReplicatedSecretSharing, share_table=
     x = x.reshape(-1, 1)
     num = x.shape[0]
 
+    previous_party = party.virtual_party_with_previous
     next_party = party.virtual_party_with_next
-    pre_party = party.virtual_party_with_previous
-    self_rdx0, _, _ = next_party.get_param(VSigmaKey, num, tag=f'{party.party_id}')
-    self_rdx1, _, _ = pre_party.get_param(VSigmaKey, num, tag=f'{party.party_id}')
-    rdx0, k0, c0 = next_party.get_param(VSigmaKey, num, tag=f'{(party.party_id + 1) % 3}')
-    rdx1, k1, c1 = pre_party.get_param(VSigmaKey, num, tag=f'{(party.party_id - 1) % 3}')
+    previous_rdx, previous_key, previous_c = previous_party.get_param(
+        VSigmaKey, num, tag=f'{party.party_id}'
+    )
+    next_rdx, next_key, next_c = next_party.get_param(
+        VSigmaKey, num, tag=f'{(party.party_id + 1) % 3}'
+    )
 
-    rdx_list = [ReplicatedSecretSharing([self_rdx0.item, self_rdx1.item]),
-                ReplicatedSecretSharing([RingTensor.convert_to_ring(0), rdx1.item]),
-                ReplicatedSecretSharing([rdx0.item, RingTensor.convert_to_ring(0)])]
+    def match_shape(value):
+        if value.numel() == 1:
+            return value.expand(*x.shape)
+        return value.reshape(x.shape)
 
-    rdx_list = list_rotate(rdx_list, party.party_id)
+    def evaluate_previous_pair():
+        local_delta = x.item[1] + match_shape(previous_rdx.item)
+        delta = sh2pc_recon(AdditiveSecretSharing(local_delta), party=previous_party)
+        boolean_share, _ = VSigma.eval(
+            delta,
+            (previous_key.to(DEVICE), previous_c.to(DEVICE)),
+            previous_party.party_id,
+        )
+        return sh2pc_b2a(boolean_share, previous_party)
 
-    delta0 = x + rdx_list[0]
-    delta1 = x + rdx_list[1]
-    delta2 = x + rdx_list[2]
+    def evaluate_next_pair():
+        local_delta = x.item[0] + x.item[1] + match_shape(next_rdx.item)
+        delta = sh2pc_recon(AdditiveSecretSharing(local_delta), party=next_party)
+        boolean_share, _ = VSigma.eval(
+            delta,
+            (next_key.to(DEVICE), next_c.to(DEVICE)),
+            next_party.party_id,
+        )
+        return sh2pc_b2a(boolean_share, next_party)
 
-    dt1_list = []
-    dt2_list = []
-
-    dt1_list.append(hm3pc_recon(delta1, 0))
-    dt2_list.append(hm3pc_recon(delta2, 0))
-
-    dt1_list.append(hm3pc_recon(delta2, 1))
-    dt2_list.append(hm3pc_recon(delta0, 1))
-
-    dt1_list.append(hm3pc_recon(delta0, 2))
-    dt2_list.append(hm3pc_recon(delta1, 2))
-
-    dt1 = dt1_list[party.party_id]
-    dt2 = dt2_list[party.party_id]
-
-    v1, pi1 = VSigma.eval(dt1, (k1.to(DEVICE), c1.to(DEVICE)), 0)
-    v2, pi2 = VSigma.eval(dt2, (k0.to(DEVICE), c0.to(DEVICE)), 1)
-
-    if party.party_id == 0:
-        v1_a = sh2pc_b2a(v1, party.virtual_party_with_previous)
-        v2_a = sh2pc_b2a(v2, party.virtual_party_with_next)
-    elif party.party_id == 1:
-        v1_a = sh2pc_b2a(v1, party.virtual_party_with_previous)
-        v2_a = sh2pc_b2a(v2, party.virtual_party_with_next)
+    if party.party_id in (0, 1):
+        v1_a = evaluate_previous_pair()
+        v2_a = evaluate_next_pair()
     elif party.party_id == 2:
-        v2_a = sh2pc_b2a(v2, party.virtual_party_with_next)
-        v1_a = sh2pc_b2a(v1, party.virtual_party_with_previous)
+        v2_a = evaluate_next_pair()
+        v1_a = evaluate_previous_pair()
     else:
-        raise Exception("Party id error!")
+        raise ValueError("party_id must be 0, 1, or 2")
     if share_table is None:
         share_table, mac_key, smac_table = party.get_param(MACKey, num)
     else:
-        share_table = share_table[0]
-        smac_table = share_table[1]
+        share_table, smac_table = share_table
         mac_key = None
     v1 = (share_table.item[0] * v1_a.item)
     v2 = (share_table.item[1] * v2_a.item)
@@ -113,6 +107,8 @@ def hm3pc_msb_with_os_without_mac_check(x: ReplicatedSecretSharing, share_table=
     v = ReplicatedSecretSharing.reshare(v, party)
     mac_v = ReplicatedSecretSharing.reshare(mac_v, party)
 
+    if mac_key is not None and shape:
+        mac_key = mac_key.expand(*shape) if mac_key.numel() == 1 else mac_key.reshape(shape)
     return v.reshape(shape), mac_v.reshape(shape), mac_key
 
 
