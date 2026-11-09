@@ -19,7 +19,7 @@ if not CONFIG_FILE.exists():
     else:
         raise FileNotFoundError("缺少配置文件")
 
-with open(CONFIG_FILE, 'r') as f:
+with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
 BIT_LEN = config['BIT_LEN']
